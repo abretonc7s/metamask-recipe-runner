@@ -1,5 +1,6 @@
 import { navigate, runAdapter } from '../platform/bridge.mjs';
 import { navigatePerps } from '../perps/perps.mjs';
+import { navigateWalletHome } from '../wallet/home.mjs';
 
 function selectedTarget(input) {
   return String(input.node?.target ?? input.node?.destination ?? input.node?.screen ?? input.node?.route ?? 'home').toLowerCase();
@@ -17,8 +18,8 @@ runAdapter(async (input) => {
     return navigatePerps(input);
   }
   if (target === 'home' || target === 'wallet') {
-    const navigation = await navigate(input, 'WalletView', {});
-    return { action: input.action, target, navigation, proofPath: 'agentic-navigation' };
+    const result = await navigateWalletHome(input);
+    return { action: input.action, target, ...result };
   }
   throw new Error(`Unsupported mobile app navigation target: ${target}`);
 });
