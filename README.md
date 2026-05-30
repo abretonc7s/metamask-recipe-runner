@@ -96,7 +96,6 @@ The current runner proves v1 action execution. Recipe v1 should not be treated a
 
 ```text
 metamask.wallet.ensure_unlocked
-metamask.network.ensure_selected
 metamask.perps.close_positions({ mode: "all" })
 metamask.perps.close_orders({ mode: "all" })
 metamask.perps.ensure_positions({ state: "none", mode: "all" })

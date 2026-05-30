@@ -73,28 +73,9 @@ Provider/network setup belongs in a configurable start-state contract such as `m
 
 ## Position update operations
 
-Perps needs more than open/close. The catalog should support one parameterized position update primitive rather than one adapter file per feature.
+Perps needs more than open/close. When TP/SL, margin, or leverage update coverage is added, prefer one parameterized position-update primitive instead of one adapter file per feature. The primitive should accept a position selector, a small set of update operations, and explicit assertions over the resulting position/order state.
 
-Recommended action:
-
-```json
-{
-  "action": "metamask.perps.update_positions",
-  "selector": { "mode": "matching", "markets": ["BTC"], "side": "long" },
-  "updates": {
-    "takeProfit": { "mode": "price", "value": "72000" },
-    "stopLoss": { "mode": "price", "value": "65000" },
-    "margin": { "operation": "increase", "amountUsd": "10" },
-    "leverage": { "value": 3 }
-  },
-  "assert": {
-    "takeProfit": "present",
-    "stopLoss": "present"
-  }
-}
-```
-
-This should compose controller-backed product APIs when that is the supported app path, then read/assert the resulting position/order state. It must not mutate React/Redux/MobX/DOM/local storage directly.
+That future primitive should compose controller-backed product APIs when that is the supported app path. It must not mutate React/Redux/MobX/DOM/local storage directly.
 
 ## Direct controller usage
 
