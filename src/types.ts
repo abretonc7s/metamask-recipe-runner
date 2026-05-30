@@ -19,6 +19,7 @@ export interface MetaMaskDoctorReport {
   target: string;
   compatibilityMode:
     | 'bridge present'
+    | 'injected bridge present'
     | 'bridge injectable'
     | 'product-local harness present'
     | 'unsupported/no bridge';

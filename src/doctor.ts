@@ -33,6 +33,9 @@ export function repoShape(target: string): Record<string, unknown> {
 export function compatibilityMode(adapter: MetaMaskRecipeAdapter, target: string) {
   const shape = repoShape(target);
   if (adapter === 'mobile') {
+    if (shape.injectedHarness && shape.agenticService && shape.mobileBridgeScript) {
+      return 'injected bridge present';
+    }
     if (shape.agenticService && shape.mobileBridgeScript) return 'bridge present';
     if (shape.mobileProductHarness && shape.mobileBridgeScript) return 'product-local harness present';
     return 'unsupported/no bridge';
