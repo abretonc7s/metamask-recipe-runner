@@ -54,17 +54,37 @@ function uniqueSymbols(symbols) {
 async function readPositions(input) {
   const positions = await evalAsync(
     input,
-    'Engine.context.PerpsController.getPositions().then(function(r){return JSON.stringify(r)})',
+    `(function(){
+      var controller = Engine && Engine.context && Engine.context.PerpsController;
+      if (!controller || typeof controller.getPositions !== 'function') {
+        throw new Error('Engine.context.PerpsController.getPositions is unavailable; cannot assert live Perps positions.');
+      }
+      return controller.getPositions().then(function(r){
+        if (!Array.isArray(r)) throw new Error('PerpsController.getPositions returned a non-array result.');
+        return JSON.stringify(r);
+      });
+    })()`,
   );
-  return Array.isArray(positions) ? positions : [];
+  if (!Array.isArray(positions)) throw new Error('PerpsController.getPositions returned a non-array result.');
+  return positions;
 }
 
 async function readOpenOrders(input) {
   const orders = await evalAsync(
     input,
-    'Engine.context.PerpsController.getOpenOrders ? Engine.context.PerpsController.getOpenOrders().then(function(r){return JSON.stringify(r)}) : Promise.resolve(JSON.stringify([]))',
+    `(function(){
+      var controller = Engine && Engine.context && Engine.context.PerpsController;
+      if (!controller || typeof controller.getOpenOrders !== 'function') {
+        throw new Error('Engine.context.PerpsController.getOpenOrders is unavailable; cannot assert live Perps orders.');
+      }
+      return controller.getOpenOrders().then(function(r){
+        if (!Array.isArray(r)) throw new Error('PerpsController.getOpenOrders returned a non-array result.');
+        return JSON.stringify(r);
+      });
+    })()`,
   );
-  return Array.isArray(orders) ? orders : [];
+  if (!Array.isArray(orders)) throw new Error('PerpsController.getOpenOrders returned a non-array result.');
+  return orders;
 }
 
 async function waitForPositionsAbsent(input, symbols, timeoutMs = 30000) {
@@ -112,8 +132,13 @@ function redactPosition(position) {
   };
 }
 
+function orderIdForItem(order) {
+  return order?.orderId ?? order?.oid ?? order?.id ?? null;
+}
+
 function redactOrder(order) {
   return {
+    orderId: orderIdForItem(order),
     symbol: order.symbol ?? order.coin ?? null,
     side: order.side ?? null,
     size: order.size ?? order.sz ?? order.szi ?? null,
@@ -268,14 +293,43 @@ export async function closeOrders(input) {
   const matching = selectedItems(input, before);
   const symbols = uniqueSymbols(matching.map(symbolForItem));
   if (symbols.length === 0) return { action: input.action, canceled: false, matchingCount: 0, symbols, result: null };
+  const orders = matching.map((order) => ({ orderId: orderIdForItem(order), symbol: symbolForItem(order) }));
+  const invalid = orders.find((order) => !order.orderId || !order.symbol);
+  if (invalid) {
+    throw new Error(`Cannot cancel selected Perps order without orderId and symbol: ${JSON.stringify(invalid)}`);
+  }
   const result = await evalAsync(
     input,
-    `Engine.context.PerpsController.cancelOrders({ symbols: ${JSON.stringify(symbols)} }).then(function(r){return JSON.stringify(r)})`,
+    `(function(){
+      var controller = Engine && Engine.context && Engine.context.PerpsController;
+      var orders = ${JSON.stringify(orders)};
+      if (!controller || typeof controller.cancelOrder !== 'function') {
+        throw new Error('Engine.context.PerpsController.cancelOrder is unavailable; cannot cancel live Perps orders.');
+      }
+      return Promise.all(orders.map(function(order){
+        return controller.cancelOrder({ orderId: String(order.orderId), symbol: order.symbol }).then(function(r){
+          return {
+            orderId: String(order.orderId),
+            symbol: order.symbol,
+            success: !r || r.success !== false,
+            result: r
+          };
+        });
+      })).then(function(results){
+        var successCount = results.filter(function(entry){ return entry.success; }).length;
+        return JSON.stringify({
+          success: successCount === results.length,
+          successCount: successCount,
+          failureCount: results.length - successCount,
+          results: results
+        });
+      });
+    })()`,
   );
   const after = await waitForOrdersAbsent(input, symbols, Number(input.node?.timeout_ms ?? 30000));
   const stillOpen = after.filter((order) => symbols.includes(symbolForItem(order)));
   if (stillOpen.length > 0) throw new Error(`Expected selected Perps orders to cancel, but ${stillOpen.length} are still open.`);
-  return { action: input.action, canceled: true, matchingCount: matching.length, symbols, result, proofPath: 'mobile-perps-controller-cancel-orders' };
+  return { action: input.action, canceled: true, matchingCount: matching.length, symbols, result, proofPath: 'mobile-perps-controller-cancel-order' };
 }
 
 export async function placeOrder(input) {
