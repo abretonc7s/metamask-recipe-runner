@@ -82,32 +82,121 @@ async function captureDomRasterFallback(page, context, relPath, metadata, cause)
   try {
     await session.call('Runtime.enable');
     const result = await session.call('Runtime.evaluate', {
-    expression: `(() => new Promise((resolve, reject) => {
-      try {
-        const width = Math.max(320, Math.min(900, window.innerWidth || document.documentElement.clientWidth || 500));
-        const height = Math.max(500, Math.min(1200, window.innerHeight || document.documentElement.clientHeight || 700));
-        const clone = document.documentElement.cloneNode(true);
-        for (const element of clone.querySelectorAll('script')) element.remove();
-        const html = new XMLSerializer().serializeToString(clone);
-        const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + width + '" height="' + height + '"><foreignObject width="100%" height="100%">' + html + '</foreignObject></svg>';
-        const image = new Image();
-        image.onload = () => {
+      expression: `(() => new Promise((resolve, reject) => {
+        try {
+          const width = Math.max(320, Math.min(900, window.innerWidth || document.documentElement.clientWidth || 500));
+          const height = Math.max(500, Math.min(1200, window.innerHeight || document.documentElement.clientHeight || 700));
           const canvas = document.createElement('canvas');
           canvas.width = width;
           canvas.height = height;
           const context2d = canvas.getContext('2d');
-          context2d.drawImage(image, 0, 0);
+          if (!context2d) throw new Error('DOM raster canvas context unavailable.');
+
+          const transparent = (color) => !color || color === 'transparent' || color === 'rgba(0, 0, 0, 0)';
+          const htmlStyle = getComputedStyle(document.documentElement);
+          const bodyStyle = document.body ? getComputedStyle(document.body) : htmlStyle;
+          context2d.fillStyle = transparent(bodyStyle.backgroundColor)
+            ? (transparent(htmlStyle.backgroundColor) ? '#000' : htmlStyle.backgroundColor)
+            : bodyStyle.backgroundColor;
+          context2d.fillRect(0, 0, width, height);
+
+          const elements = Array.from(document.querySelectorAll('body, body *'));
+          const visibleEntries = [];
+          for (const element of elements) {
+            const style = getComputedStyle(element);
+            if (style.display === 'none' || style.visibility === 'hidden' || Number(style.opacity) === 0) continue;
+            const rect = element.getBoundingClientRect();
+            if (rect.width <= 0 || rect.height <= 0) continue;
+            if (rect.right < 0 || rect.bottom < 0 || rect.left > width || rect.top > height) continue;
+            visibleEntries.push({ element, style, rect });
+          }
+
+          const clampRect = (rect) => ({
+            x: Math.max(0, rect.left),
+            y: Math.max(0, rect.top),
+            width: Math.min(width, rect.right) - Math.max(0, rect.left),
+            height: Math.min(height, rect.bottom) - Math.max(0, rect.top),
+          });
+
+          for (const entry of visibleEntries) {
+            const { style, rect } = entry;
+            const box = clampRect(rect);
+            if (box.width <= 0 || box.height <= 0) continue;
+            if (!transparent(style.backgroundColor)) {
+              context2d.globalAlpha = Math.max(0, Math.min(1, Number(style.opacity) || 1));
+              context2d.fillStyle = style.backgroundColor;
+              context2d.fillRect(box.x, box.y, box.width, box.height);
+              context2d.globalAlpha = 1;
+            }
+            const borderColor = style.borderTopColor;
+            const borderWidth = Number.parseFloat(style.borderTopWidth || '0');
+            if (borderWidth > 0 && !transparent(borderColor)) {
+              context2d.strokeStyle = borderColor;
+              context2d.lineWidth = Math.min(borderWidth, 4);
+              context2d.strokeRect(box.x, box.y, box.width, box.height);
+            }
+          }
+
+          const directText = (element) => Array.from(element.childNodes)
+            .filter((node) => node.nodeType === Node.TEXT_NODE)
+            .map((node) => node.textContent || '')
+            .join(' ')
+            .replace(/\\s+/g, ' ')
+            .trim();
+          const elementText = (element) => {
+            if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
+              return element.value || element.placeholder || element.getAttribute('aria-label') || '';
+            }
+            const tag = element.tagName.toLowerCase();
+            const direct = directText(element);
+            if (direct) return direct;
+            if (tag === 'button' || element.getAttribute('role') === 'button' || element.dataset?.testid) {
+              return (element.innerText || element.textContent || element.getAttribute('aria-label') || '').replace(/\\s+/g, ' ').trim();
+            }
+            return element.getAttribute('aria-label') || '';
+          };
+          const drawText = (text, box, style) => {
+            if (!text || box.width < 6 || box.height < 6) return;
+            const fontSize = Math.max(8, Math.min(28, Number.parseFloat(style.fontSize || '12') || 12));
+            context2d.font = [style.fontStyle, style.fontWeight, fontSize + 'px', style.fontFamily || 'sans-serif'].filter(Boolean).join(' ');
+            context2d.fillStyle = transparent(style.color) ? '#fff' : style.color;
+            context2d.textBaseline = 'top';
+            const words = text.split(/\\s+/).filter(Boolean);
+            const lineHeight = Math.ceil(fontSize * 1.25);
+            let line = '';
+            let y = box.y + Math.max(2, Math.min(8, box.height * 0.12));
+            const x = box.x + Math.max(2, Math.min(10, box.width * 0.04));
+            const maxWidth = Math.max(12, box.width - (x - box.x) * 2);
+            const maxY = box.y + box.height - lineHeight;
+            for (const word of words) {
+              const candidate = line ? line + ' ' + word : word;
+              if (context2d.measureText(candidate).width > maxWidth && line) {
+                context2d.fillText(line, x, y, maxWidth);
+                y += lineHeight;
+                line = word;
+                if (y > maxY) break;
+              } else {
+                line = candidate;
+              }
+            }
+            if (line && y <= maxY + 1) context2d.fillText(line, x, y, maxWidth);
+          };
+
+          for (const entry of visibleEntries) {
+            const box = clampRect(entry.rect);
+            const text = elementText(entry.element);
+            if (!text) continue;
+            drawText(text, box, entry.style);
+          }
+
           resolve({ data: canvas.toDataURL('image/png'), width, height });
-        };
-        image.onerror = () => reject(new Error('DOM raster image load failed'));
-        image.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
-      } catch (error) {
-        reject(error);
-      }
-    }))()`,
-    awaitPromise: true,
-    returnByValue: true,
-  });
+        } catch (error) {
+          reject(error);
+        }
+      }))()`,
+      awaitPromise: true,
+      returnByValue: true,
+    });
     if (result.exceptionDetails) {
       throw new Error(
         result.exceptionDetails.exception?.description ??
