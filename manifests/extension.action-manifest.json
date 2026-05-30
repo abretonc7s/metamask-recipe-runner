@@ -1,0 +1,1642 @@
+{
+  "runner_protocol_version": 1,
+  "action_registry_version": 1,
+  "supported_official_actions": [
+    "command",
+    "wait",
+    "assert_file",
+    "assert_json",
+    "assert_exit_code",
+    "assert_output",
+    "watch_logs",
+    "index_artifacts",
+    "end",
+    "ui.navigate",
+    "ui.press",
+    "ui.scroll",
+    "ui.wait_for",
+    "ui.screenshot",
+    "app.status",
+    "app.hud",
+    "cdp.target"
+  ],
+  "action_metadata": {
+    "command": {
+      "description": "Run a shell command from the project root.",
+      "examples": [
+        {
+          "node": {
+            "action": "command",
+            "cmd": "pwd"
+          }
+        }
+      ]
+    },
+    "wait": {
+      "description": "Base wait action.",
+      "examples": [
+        {
+          "node": {
+            "action": "wait",
+            "duration_ms": 1
+          }
+        }
+      ]
+    },
+    "watch_logs": {
+      "description": "Base log assertion/capture action.",
+      "examples": [
+        {
+          "node": {
+            "action": "watch_logs",
+            "path": "logs/app.log"
+          }
+        }
+      ]
+    },
+    "index_artifacts": {
+      "description": "Base artifact copier/indexer.",
+      "examples": [
+        {
+          "node": {
+            "action": "index_artifacts",
+            "artifacts": []
+          }
+        }
+      ]
+    },
+    "end": {
+      "description": "Base terminal action.",
+      "examples": [
+        {
+          "node": {
+            "action": "end",
+            "status": "pass"
+          }
+        }
+      ]
+    },
+    "ui.press": {
+      "description": "Press/tap/click a UI target through the platform adapter.",
+      "examples": [
+        {
+          "node": {
+            "action": "ui.press",
+            "target": "Perps"
+          }
+        }
+      ]
+    },
+    "ui.scroll": {
+      "description": "Scroll through the UI through the Farmslot base platform adapter. Supports deltas and scroll_into_view for selector/test-id proof positioning.",
+      "examples": [
+        {
+          "node": {
+            "action": "ui.scroll",
+            "delta_y": 300
+          }
+        },
+        {
+          "description": "Bring a web selector into view before screenshot proof",
+          "node": {
+            "action": "ui.scroll",
+            "selector": "[data-testid=\"example\"]",
+            "scroll_into_view": true
+          }
+        }
+      ],
+      "proof_effect": "E2E validation must include a passing ui-scroll-into-view trace event with output.intoView=true."
+    },
+    "ui.wait_for": {
+      "description": "Wait for a UI condition through the platform adapter.",
+      "examples": [
+        {
+          "node": {
+            "action": "ui.wait_for",
+            "text": "Perps"
+          }
+        }
+      ]
+    },
+    "ui.screenshot": {
+      "description": "Capture visual evidence through the platform adapter.",
+      "examples": [
+        {
+          "node": {
+            "action": "ui.screenshot",
+            "path": "screenshots/example.json"
+          }
+        }
+      ]
+    },
+    "assert_file": {
+      "description": "Assert that a project file exists and optionally contains text.",
+      "examples": [
+        {
+          "node": {
+            "action": "assert_file",
+            "path": "reports/result.txt",
+            "contains": "ok"
+          }
+        }
+      ]
+    },
+    "assert_json": {
+      "description": "Assert a JSON file value with a JSONPath-style selector.",
+      "examples": [
+        {
+          "node": {
+            "action": "assert_json",
+            "path": "reports/result.json",
+            "assert": {
+              "path": "$.status",
+              "operator": "eq",
+              "value": "ok"
+            }
+          }
+        }
+      ]
+    },
+    "assert_exit_code": {
+      "description": "Assert the exit code captured from a command node output.",
+      "examples": [
+        {
+          "node": {
+            "action": "assert_exit_code",
+            "source": "run-tests",
+            "expected": 0
+          }
+        }
+      ]
+    },
+    "assert_output": {
+      "description": "Assert stdout or stderr captured from a command node output.",
+      "examples": [
+        {
+          "node": {
+            "action": "assert_output",
+            "source": "run-tests",
+            "stream": "stdout",
+            "contains": "PASS"
+          }
+        }
+      ]
+    },
+    "app.hud": {
+      "description": "Display minimal human-readable recipe progress. The intent must explain the current agent goal; debug metadata and flow/domain labels are hidden unless explicitly opted in.",
+      "examples": [
+        {
+          "description": "Default one-intent progress HUD",
+          "node": {
+            "action": "app.hud",
+            "status": "running",
+            "intent": "Open a small ETH long position",
+            "progress": {
+              "current": 12,
+              "total": 19
+            }
+          }
+        },
+        {
+          "description": "Explicit composed subflow context",
+          "node": {
+            "action": "app.hud",
+            "status": "running",
+            "intent": "Open a small ETH long position",
+            "sub_intent": "Validate Perps lifecycle smoke",
+            "display": {
+              "showSubflow": true
+            },
+            "progress": {
+              "current": 12,
+              "total": 19
+            }
+          }
+        }
+      ],
+      "safety_notes": "HUD is reviewer feedback only. It must not mutate product state or carry task assertions; trace/artifacts remain authoritative."
+    }
+  },
+  "custom_actions": [
+    {
+      "name": "metamask.wallet.fixture_status",
+      "owner": "metamask",
+      "description": "extension manifest-declared action metamask.wallet.fixture_status.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "const": "metamask.wallet.fixture_status"
+          }
+        },
+        "required": [
+          "action"
+        ]
+      },
+      "examples": [
+        {
+          "description": "Minimal node",
+          "node": {
+            "action": "metamask.wallet.fixture_status"
+          }
+        }
+      ],
+      "proof_effect": "E2E validation must record this action in trace.json; live-proof actions include liveAdapter/proofPath or target runtime output.",
+      "safety_notes": "Must not inject mid-recipe UI/app state to fabricate proof."
+    },
+    {
+      "name": "metamask.wallet.setup",
+      "owner": "metamask",
+      "description": "extension manifest-declared action metamask.wallet.setup.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "const": "metamask.wallet.setup"
+          }
+        },
+        "required": [
+          "action"
+        ]
+      },
+      "examples": [
+        {
+          "description": "Minimal node",
+          "node": {
+            "action": "metamask.wallet.setup"
+          }
+        }
+      ],
+      "proof_effect": "E2E validation must record this action in trace.json; live-proof actions include liveAdapter/proofPath or target runtime output.",
+      "safety_notes": "Must not inject mid-recipe UI/app state to fabricate proof."
+    },
+    {
+      "name": "metamask.wallet.ensure_unlocked",
+      "owner": "metamask",
+      "description": "extension manifest-declared action metamask.wallet.ensure_unlocked.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "const": "metamask.wallet.ensure_unlocked"
+          }
+        },
+        "required": [
+          "action"
+        ]
+      },
+      "examples": [
+        {
+          "description": "Minimal node",
+          "node": {
+            "action": "metamask.wallet.ensure_unlocked"
+          }
+        }
+      ],
+      "proof_effect": "E2E validation must record this action in trace.json; live-proof actions include liveAdapter/proofPath or target runtime output.",
+      "safety_notes": "Must not inject mid-recipe UI/app state to fabricate proof."
+    },
+    {
+      "name": "metamask.wallet.select_account",
+      "description": "extension action to select a wallet account by address, id, or display name.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "const": "metamask.wallet.select_account"
+          },
+          "address": {
+            "type": "string",
+            "description": "EVM address of the account to select."
+          },
+          "id": {
+            "type": "string",
+            "description": "Internal account id to select."
+          },
+          "name": {
+            "type": "string",
+            "description": "Display name of the account to select."
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "anyOf": [
+          {
+            "required": [
+              "address"
+            ]
+          },
+          {
+            "required": [
+              "id"
+            ]
+          },
+          {
+            "required": [
+              "name"
+            ]
+          }
+        ]
+      },
+      "examples": [
+        {
+          "description": "Select by deterministic fixture address",
+          "node": {
+            "action": "metamask.wallet.select_account",
+            "address": "0x8dc623e964475d4d669da601fd15ea9125469003"
+          }
+        },
+        {
+          "description": "Select by fixture display name",
+          "node": {
+            "action": "metamask.wallet.select_account",
+            "name": "dev1"
+          }
+        }
+      ]
+    },
+    {
+      "name": "metamask.wallet.navigate",
+      "owner": "metamask",
+      "description": "extension manifest-declared action metamask.wallet.navigate.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "const": "metamask.wallet.navigate"
+          },
+          "target": {
+            "type": "string",
+            "description": "Destination within the action domain."
+          },
+          "destination": {
+            "type": "string",
+            "description": "Alias for target."
+          },
+          "market": {
+            "type": "string",
+            "description": "Market symbol when target is market/trade."
+          },
+          "symbol": {
+            "type": "string",
+            "description": "Alias for market."
+          },
+          "side": {
+            "type": "string",
+            "enum": [
+              "long",
+              "short"
+            ],
+            "description": "Trade direction when target is trade."
+          },
+          "timeout_ms": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "action"
+        ]
+      },
+      "examples": [
+        {
+          "description": "Open Perps from wallet shell",
+          "node": {
+            "action": "metamask.wallet.navigate",
+            "target": "perps"
+          }
+        }
+      ],
+      "proof_effect": "E2E validation must record this action in trace.json; live-proof actions include liveAdapter/proofPath or target runtime output.",
+      "safety_notes": "Must not inject mid-recipe UI/app state to fabricate proof."
+    },
+    {
+      "name": "metamask.wallet.read_state",
+      "owner": "metamask",
+      "description": "extension manifest-declared action metamask.wallet.read_state.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "const": "metamask.wallet.read_state"
+          }
+        },
+        "required": [
+          "action"
+        ]
+      },
+      "examples": [
+        {
+          "description": "Minimal node",
+          "node": {
+            "action": "metamask.wallet.read_state"
+          }
+        }
+      ],
+      "proof_effect": "E2E validation must record this action in trace.json; live-proof actions include liveAdapter/proofPath or target runtime output.",
+      "safety_notes": "Must not inject mid-recipe UI/app state to fabricate proof."
+    },
+    {
+      "name": "metamask.perps.navigate",
+      "owner": "metamask",
+      "description": "extension Navigate within Perps with a target such as home, market, or trade.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "const": "metamask.perps.navigate"
+          },
+          "target": {
+            "type": "string",
+            "description": "home | market | trade"
+          },
+          "destination": {
+            "type": "string",
+            "description": "Alias for target."
+          },
+          "market": {
+            "type": "string",
+            "description": "Single market symbol, e.g. BTC or ETH. Alias: symbol."
+          },
+          "symbol": {
+            "type": "string",
+            "description": "Alias for market."
+          },
+          "side": {
+            "type": "string",
+            "enum": [
+              "long",
+              "short"
+            ],
+            "description": "Optional position/order side filter."
+          },
+          "timeout_ms": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "action"
+        ]
+      },
+      "examples": [
+        {
+          "description": "Open Perps home",
+          "node": {
+            "action": "metamask.perps.navigate",
+            "target": "home"
+          }
+        },
+        {
+          "description": "Open BTC market",
+          "node": {
+            "action": "metamask.perps.navigate",
+            "target": "market",
+            "market": "BTC"
+          }
+        }
+      ],
+      "proof_effect": "E2E validation must record this action in trace.json; live-proof actions include liveAdapter/proofPath or target runtime output.",
+      "safety_notes": "Must not inject mid-recipe UI/app state to fabricate proof."
+    },
+    {
+      "name": "metamask.perps.read_positions",
+      "owner": "metamask",
+      "description": "extension Read live Perps positions and return the selected subset.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "const": "metamask.perps.read_positions"
+          },
+          "market": {
+            "type": "string",
+            "description": "Single market symbol, e.g. BTC or ETH. Alias: symbol."
+          },
+          "symbol": {
+            "type": "string",
+            "description": "Alias for market."
+          },
+          "markets": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Explicit list of market symbols."
+          },
+          "symbols": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Alias for markets."
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "matching",
+              "all"
+            ],
+            "description": "matching selects requested symbols; all selects every live item returned by the product."
+          },
+          "selector": {
+            "type": "object",
+            "description": "Optional structured selector with mode, symbols/markets, and side."
+          },
+          "side": {
+            "type": "string",
+            "enum": [
+              "long",
+              "short"
+            ],
+            "description": "Optional position/order side filter."
+          },
+          "timeout_ms": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "action"
+        ]
+      },
+      "examples": [
+        {
+          "description": "Read selected live state",
+          "node": {
+            "action": "metamask.perps.read_positions",
+            "market": "BTC"
+          }
+        }
+      ],
+      "proof_effect": "E2E validation must record this action in trace.json; live-proof actions include liveAdapter/proofPath or target runtime output.",
+      "safety_notes": "Must not inject mid-recipe UI/app state to fabricate proof."
+    },
+    {
+      "name": "metamask.perps.read_orders",
+      "owner": "metamask",
+      "description": "extension Read live Perps open orders and return the selected subset.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "const": "metamask.perps.read_orders"
+          },
+          "market": {
+            "type": "string",
+            "description": "Single market symbol, e.g. BTC or ETH. Alias: symbol."
+          },
+          "symbol": {
+            "type": "string",
+            "description": "Alias for market."
+          },
+          "markets": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Explicit list of market symbols."
+          },
+          "symbols": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Alias for markets."
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "matching",
+              "all"
+            ],
+            "description": "matching selects requested symbols; all selects every live item returned by the product."
+          },
+          "selector": {
+            "type": "object",
+            "description": "Optional structured selector with mode, symbols/markets, and side."
+          },
+          "side": {
+            "type": "string",
+            "enum": [
+              "long",
+              "short"
+            ],
+            "description": "Optional position/order side filter."
+          },
+          "timeout_ms": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "action"
+        ]
+      },
+      "examples": [
+        {
+          "description": "Read selected live state",
+          "node": {
+            "action": "metamask.perps.read_orders",
+            "market": "BTC"
+          }
+        }
+      ],
+      "proof_effect": "E2E validation must record this action in trace.json; live-proof actions include liveAdapter/proofPath or target runtime output.",
+      "safety_notes": "Must not inject mid-recipe UI/app state to fabricate proof."
+    },
+    {
+      "name": "metamask.perps.close_positions",
+      "owner": "metamask",
+      "description": "extension Close selected live Perps positions. Use selector/mode params to close matching symbols or all positions.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "const": "metamask.perps.close_positions"
+          },
+          "market": {
+            "type": "string",
+            "description": "Single market symbol, e.g. BTC or ETH. Alias: symbol."
+          },
+          "symbol": {
+            "type": "string",
+            "description": "Alias for market."
+          },
+          "markets": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Explicit list of market symbols."
+          },
+          "symbols": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Alias for markets."
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "matching",
+              "all"
+            ],
+            "description": "matching selects requested symbols; all selects every live item returned by the product."
+          },
+          "selector": {
+            "type": "object",
+            "description": "Optional structured selector with mode, symbols/markets, and side."
+          },
+          "side": {
+            "type": "string",
+            "enum": [
+              "long",
+              "short"
+            ],
+            "description": "Optional position/order side filter."
+          },
+          "timeout_ms": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "action"
+        ]
+      },
+      "examples": [
+        {
+          "description": "Close every open position",
+          "node": {
+            "action": "metamask.perps.close_positions",
+            "mode": "all"
+          }
+        },
+        {
+          "description": "Close selected BTC/ETH positions",
+          "node": {
+            "action": "metamask.perps.close_positions",
+            "markets": [
+              "BTC",
+              "ETH"
+            ]
+          }
+        }
+      ],
+      "proof_effect": "E2E validation must record this action in trace.json; live-proof actions include liveAdapter/proofPath or target runtime output.",
+      "safety_notes": "Must not inject mid-recipe UI/app state to fabricate proof."
+    },
+    {
+      "name": "metamask.perps.close_orders",
+      "owner": "metamask",
+      "description": "extension Cancel selected live Perps open orders. Use selector/mode params to cancel matching symbols or all orders.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "const": "metamask.perps.close_orders"
+          },
+          "market": {
+            "type": "string",
+            "description": "Single market symbol, e.g. BTC or ETH. Alias: symbol."
+          },
+          "symbol": {
+            "type": "string",
+            "description": "Alias for market."
+          },
+          "markets": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Explicit list of market symbols."
+          },
+          "symbols": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Alias for markets."
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "matching",
+              "all"
+            ],
+            "description": "matching selects requested symbols; all selects every live item returned by the product."
+          },
+          "selector": {
+            "type": "object",
+            "description": "Optional structured selector with mode, symbols/markets, and side."
+          },
+          "side": {
+            "type": "string",
+            "enum": [
+              "long",
+              "short"
+            ],
+            "description": "Optional position/order side filter."
+          },
+          "timeout_ms": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "action"
+        ]
+      },
+      "examples": [
+        {
+          "description": "Cancel every open order",
+          "node": {
+            "action": "metamask.perps.close_orders",
+            "mode": "all"
+          }
+        },
+        {
+          "description": "Cancel BTC orders only",
+          "node": {
+            "action": "metamask.perps.close_orders",
+            "market": "BTC"
+          }
+        }
+      ],
+      "proof_effect": "E2E validation must record this action in trace.json; live-proof actions include liveAdapter/proofPath or target runtime output.",
+      "safety_notes": "Must not inject mid-recipe UI/app state to fabricate proof."
+    },
+    {
+      "name": "metamask.perps.place_order",
+      "owner": "metamask",
+      "description": "extension Place a live Perps order through a supported app/API path.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "const": "metamask.perps.place_order"
+          },
+          "market": {
+            "type": "string",
+            "description": "Single market symbol, e.g. BTC or ETH. Alias: symbol."
+          },
+          "symbol": {
+            "type": "string",
+            "description": "Alias for market."
+          },
+          "markets": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Explicit list of market symbols."
+          },
+          "symbols": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Alias for markets."
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "matching",
+              "all"
+            ],
+            "description": "matching selects requested symbols; all selects every live item returned by the product."
+          },
+          "selector": {
+            "type": "object",
+            "description": "Optional structured selector with mode, symbols/markets, and side."
+          },
+          "side": {
+            "type": "string",
+            "enum": [
+              "long",
+              "short"
+            ],
+            "description": "Optional position/order side filter."
+          },
+          "timeout_ms": {
+            "type": "number"
+          },
+          "amount": {
+            "type": "string",
+            "description": "USD amount/notional alias."
+          },
+          "notional": {
+            "type": "string",
+            "description": "USD notional alias."
+          },
+          "size": {
+            "type": "string",
+            "description": "Base asset size when supported."
+          },
+          "leverage": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "action"
+        ]
+      },
+      "examples": [
+        {
+          "description": "Place BTC market order",
+          "node": {
+            "action": "metamask.perps.place_order",
+            "market": "BTC",
+            "side": "long",
+            "notional": "10",
+            "leverage": 2
+          }
+        }
+      ],
+      "proof_effect": "E2E validation must record this action in trace.json; live-proof actions include liveAdapter/proofPath or target runtime output.",
+      "safety_notes": "Must not inject mid-recipe UI/app state to fabricate proof."
+    },
+    {
+      "name": "metamask.perps.assert_positions",
+      "owner": "metamask",
+      "description": "extension Assert selected live Perps positions are present or absent.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "const": "metamask.perps.assert_positions"
+          },
+          "market": {
+            "type": "string",
+            "description": "Single market symbol, e.g. BTC or ETH. Alias: symbol."
+          },
+          "symbol": {
+            "type": "string",
+            "description": "Alias for market."
+          },
+          "markets": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Explicit list of market symbols."
+          },
+          "symbols": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Alias for markets."
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "matching",
+              "all"
+            ],
+            "description": "matching selects requested symbols; all selects every live item returned by the product."
+          },
+          "selector": {
+            "type": "object",
+            "description": "Optional structured selector with mode, symbols/markets, and side."
+          },
+          "side": {
+            "type": "string",
+            "enum": [
+              "long",
+              "short"
+            ],
+            "description": "Optional position/order side filter."
+          },
+          "timeout_ms": {
+            "type": "number"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "none",
+              "absent",
+              "closed",
+              "open",
+              "present"
+            ],
+            "description": "Desired/expected selected collection state."
+          }
+        },
+        "required": [
+          "action"
+        ]
+      },
+      "examples": [
+        {
+          "description": "Assert BTC position is open",
+          "node": {
+            "action": "metamask.perps.assert_positions",
+            "state": "open",
+            "market": "BTC"
+          }
+        }
+      ],
+      "proof_effect": "E2E validation must record this action in trace.json; live-proof actions include liveAdapter/proofPath or target runtime output.",
+      "safety_notes": "Must not inject mid-recipe UI/app state to fabricate proof."
+    },
+    {
+      "name": "metamask.perps.assert_orders",
+      "owner": "metamask",
+      "description": "extension Assert selected live Perps open orders are present or absent.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "const": "metamask.perps.assert_orders"
+          },
+          "market": {
+            "type": "string",
+            "description": "Single market symbol, e.g. BTC or ETH. Alias: symbol."
+          },
+          "symbol": {
+            "type": "string",
+            "description": "Alias for market."
+          },
+          "markets": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Explicit list of market symbols."
+          },
+          "symbols": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Alias for markets."
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "matching",
+              "all"
+            ],
+            "description": "matching selects requested symbols; all selects every live item returned by the product."
+          },
+          "selector": {
+            "type": "object",
+            "description": "Optional structured selector with mode, symbols/markets, and side."
+          },
+          "side": {
+            "type": "string",
+            "enum": [
+              "long",
+              "short"
+            ],
+            "description": "Optional position/order side filter."
+          },
+          "timeout_ms": {
+            "type": "number"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "none",
+              "absent",
+              "closed",
+              "open",
+              "present"
+            ],
+            "description": "Desired/expected selected collection state."
+          }
+        },
+        "required": [
+          "action"
+        ]
+      },
+      "examples": [
+        {
+          "description": "Assert no BTC open orders",
+          "node": {
+            "action": "metamask.perps.assert_orders",
+            "state": "none",
+            "market": "BTC"
+          }
+        }
+      ],
+      "proof_effect": "E2E validation must record this action in trace.json; live-proof actions include liveAdapter/proofPath or target runtime output.",
+      "safety_notes": "Must not inject mid-recipe UI/app state to fabricate proof."
+    },
+    {
+      "name": "metamask.perps.ensure_positions",
+      "owner": "metamask",
+      "description": "extension Higher-level wrapper that reads selected positions, closes or places when needed, then asserts final position state.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "const": "metamask.perps.ensure_positions"
+          },
+          "market": {
+            "type": "string",
+            "description": "Single market symbol, e.g. BTC or ETH. Alias: symbol."
+          },
+          "symbol": {
+            "type": "string",
+            "description": "Alias for market."
+          },
+          "markets": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Explicit list of market symbols."
+          },
+          "symbols": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Alias for markets."
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "matching",
+              "all"
+            ],
+            "description": "matching selects requested symbols; all selects every live item returned by the product."
+          },
+          "selector": {
+            "type": "object",
+            "description": "Optional structured selector with mode, symbols/markets, and side."
+          },
+          "side": {
+            "type": "string",
+            "enum": [
+              "long",
+              "short"
+            ],
+            "description": "Optional position/order side filter."
+          },
+          "timeout_ms": {
+            "type": "number"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "none",
+              "absent",
+              "closed",
+              "open",
+              "present"
+            ],
+            "description": "Desired/expected selected collection state."
+          }
+        },
+        "required": [
+          "action"
+        ]
+      },
+      "examples": [
+        {
+          "description": "Ensure no BTC position before proof window",
+          "node": {
+            "action": "metamask.perps.ensure_positions",
+            "state": "none",
+            "market": "BTC"
+          }
+        },
+        {
+          "description": "Ensure any existing positions are closed",
+          "node": {
+            "action": "metamask.perps.ensure_positions",
+            "state": "none",
+            "mode": "all"
+          }
+        }
+      ],
+      "proof_effect": "E2E validation must record this action in trace.json; live-proof actions include liveAdapter/proofPath or target runtime output.",
+      "safety_notes": "Must not inject mid-recipe UI/app state to fabricate proof."
+    },
+    {
+      "name": "metamask.perps.ensure_orders",
+      "owner": "metamask",
+      "description": "extension Higher-level wrapper that reads selected orders, cancels when needed, then asserts final order state.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "const": "metamask.perps.ensure_orders"
+          },
+          "market": {
+            "type": "string",
+            "description": "Single market symbol, e.g. BTC or ETH. Alias: symbol."
+          },
+          "symbol": {
+            "type": "string",
+            "description": "Alias for market."
+          },
+          "markets": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Explicit list of market symbols."
+          },
+          "symbols": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Alias for markets."
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "matching",
+              "all"
+            ],
+            "description": "matching selects requested symbols; all selects every live item returned by the product."
+          },
+          "selector": {
+            "type": "object",
+            "description": "Optional structured selector with mode, symbols/markets, and side."
+          },
+          "side": {
+            "type": "string",
+            "enum": [
+              "long",
+              "short"
+            ],
+            "description": "Optional position/order side filter."
+          },
+          "timeout_ms": {
+            "type": "number"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "none",
+              "absent",
+              "closed",
+              "open",
+              "present"
+            ],
+            "description": "Desired/expected selected collection state."
+          }
+        },
+        "required": [
+          "action"
+        ]
+      },
+      "examples": [
+        {
+          "description": "Ensure no open orders before proof window",
+          "node": {
+            "action": "metamask.perps.ensure_orders",
+            "state": "none",
+            "mode": "all"
+          }
+        }
+      ],
+      "proof_effect": "E2E validation must record this action in trace.json; live-proof actions include liveAdapter/proofPath or target runtime output.",
+      "safety_notes": "Must not inject mid-recipe UI/app state to fabricate proof."
+    },
+    {
+      "name": "metamask.perps.start_state",
+      "owner": "metamask",
+      "description": "extension Recommended configurable Perps start state that composes reusable domain operations before the proof window.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "const": "metamask.perps.start_state"
+          },
+          "profile": {
+            "type": "string",
+            "description": "Optional profile such as clean_market_testnet, open_position_testnet, open_order_testnet, or provider_mainnet_readonly."
+          },
+          "account": {
+            "type": "string"
+          },
+          "provider": {
+            "type": "string",
+            "description": "Requested Perps provider, e.g. hyperliquid."
+          },
+          "network": {
+            "type": "string",
+            "enum": [
+              "testnet",
+              "mainnet"
+            ]
+          },
+          "market": {
+            "type": "string"
+          },
+          "symbol": {
+            "type": "string"
+          },
+          "markets": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "symbols": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "page": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "const": false
+              }
+            ],
+            "description": "Final page target; false skips navigation for teardown."
+          },
+          "positions": {
+            "oneOf": [
+              {
+                "type": "object"
+              },
+              {
+                "const": false
+              }
+            ],
+            "description": "Desired position baseline or false to skip."
+          },
+          "orders": {
+            "oneOf": [
+              {
+                "type": "object"
+              },
+              {
+                "const": false
+              }
+            ],
+            "description": "Desired open-order baseline or false to skip."
+          },
+          "hud": {
+            "type": "object"
+          },
+          "timeout_ms": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "action"
+        ]
+      },
+      "examples": [
+        {
+          "description": "Clean BTC testnet market state",
+          "node": {
+            "action": "metamask.perps.start_state",
+            "profile": "clean_market_testnet",
+            "market": "BTC",
+            "positions": {
+              "state": "none"
+            },
+            "orders": {
+              "state": "none"
+            }
+          }
+        },
+        {
+          "description": "Start with an open ETH long position",
+          "node": {
+            "action": "metamask.perps.start_state",
+            "profile": "open_position_testnet",
+            "market": "ETH",
+            "side": "long",
+            "positions": {
+              "state": "open",
+              "notional": "10",
+              "leverage": 2
+            }
+          }
+        }
+      ],
+      "proof_effect": "Runs in setup/teardown phase and must be visible in trace.json; proof videos can keep this as trace-only setup.",
+      "safety_notes": "Composes supported app/API paths and must not mutate React/Redux/MobX/DOM/local storage to fabricate proof."
+    },
+    {
+      "name": "metamask.perps.teardown_state",
+      "owner": "metamask",
+      "description": "extension Recommended configurable Perps teardown state that restores the selected environment after proof.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "const": "metamask.perps.teardown_state"
+          },
+          "profile": {
+            "type": "string",
+            "description": "Optional profile such as clean_market_testnet, open_position_testnet, open_order_testnet, or provider_mainnet_readonly."
+          },
+          "account": {
+            "type": "string"
+          },
+          "provider": {
+            "type": "string",
+            "description": "Requested Perps provider, e.g. hyperliquid."
+          },
+          "network": {
+            "type": "string",
+            "enum": [
+              "testnet",
+              "mainnet"
+            ]
+          },
+          "market": {
+            "type": "string"
+          },
+          "symbol": {
+            "type": "string"
+          },
+          "markets": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "symbols": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "page": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "const": false
+              }
+            ],
+            "description": "Final page target; false skips navigation for teardown."
+          },
+          "positions": {
+            "oneOf": [
+              {
+                "type": "object"
+              },
+              {
+                "const": false
+              }
+            ],
+            "description": "Desired position baseline or false to skip."
+          },
+          "orders": {
+            "oneOf": [
+              {
+                "type": "object"
+              },
+              {
+                "const": false
+              }
+            ],
+            "description": "Desired open-order baseline or false to skip."
+          },
+          "hud": {
+            "type": "object"
+          },
+          "timeout_ms": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "action"
+        ]
+      },
+      "examples": [
+        {
+          "description": "Return BTC test account to clean state",
+          "node": {
+            "action": "metamask.perps.teardown_state",
+            "market": "BTC",
+            "positions": {
+              "state": "none"
+            },
+            "orders": {
+              "state": "none"
+            },
+            "page": "home"
+          }
+        },
+        {
+          "description": "Teardown only state created by selected market",
+          "node": {
+            "action": "metamask.perps.teardown_state",
+            "market": "BTC"
+          }
+        }
+      ],
+      "proof_effect": "Runs in setup/teardown phase and must be visible in trace.json; proof videos can keep this as trace-only setup.",
+      "safety_notes": "Composes supported app/API paths and must not mutate React/Redux/MobX/DOM/local storage to fabricate proof."
+    }
+  ],
+  "state_refs": [
+    {
+      "name": "wallet.redacted_state",
+      "description": "Redacted wallet state reported by metamask.wallet.read_state."
+    },
+    {
+      "name": "perps.positions",
+      "description": "Normalized Perps position state."
+    }
+  ],
+  "pre_conditions": [
+    {
+      "id": "no-mid-recipe-state-injection",
+      "description": "Recipes must drive real supported UI/app/API paths for proof state."
+    }
+  ],
+  "native_bindings": [
+    {
+      "action": "command",
+      "implementation": "@farmslot/recipe-harness/core"
+    },
+    {
+      "action": "wait",
+      "implementation": "@farmslot/recipe-harness/core"
+    },
+    {
+      "action": "assert_file",
+      "implementation": "@farmslot/recipe-harness/core"
+    },
+    {
+      "action": "assert_json",
+      "implementation": "@farmslot/recipe-harness/core"
+    },
+    {
+      "action": "assert_exit_code",
+      "implementation": "@farmslot/recipe-harness/core"
+    },
+    {
+      "action": "assert_output",
+      "implementation": "@farmslot/recipe-harness/core"
+    },
+    {
+      "action": "watch_logs",
+      "implementation": "@farmslot/recipe-harness/core"
+    },
+    {
+      "action": "index_artifacts",
+      "implementation": "@farmslot/recipe-harness/core"
+    },
+    {
+      "action": "end",
+      "implementation": "@farmslot/recipe-harness/core"
+    },
+    {
+      "action": "ui.navigate",
+      "implementation": "@farmslot/recipe-harness/cdp-web"
+    },
+    {
+      "action": "ui.press",
+      "implementation": "@farmslot/recipe-harness/cdp-web"
+    },
+    {
+      "action": "ui.scroll",
+      "implementation": "@farmslot/recipe-harness/cdp-web"
+    },
+    {
+      "action": "ui.wait_for",
+      "implementation": "@farmslot/recipe-harness/cdp-web"
+    },
+    {
+      "action": "ui.screenshot",
+      "implementation": "@farmslot/recipe-harness/cdp-web"
+    },
+    {
+      "action": "app.status",
+      "implementation": "@farmslot/recipe-harness/cdp-web"
+    },
+    {
+      "action": "app.hud",
+      "implementation": "@farmslot/recipe-harness/cdp-web"
+    },
+    {
+      "action": "cdp.target",
+      "implementation": "@metamask/recipe-runner/platform-cdp-target"
+    },
+    {
+      "action": "metamask.wallet.fixture_status",
+      "implementation": "@metamask/recipe-runner/extension/wallet"
+    },
+    {
+      "action": "metamask.wallet.setup",
+      "implementation": "@metamask/recipe-runner/extension/wallet"
+    },
+    {
+      "action": "metamask.wallet.ensure_unlocked",
+      "implementation": "@metamask/recipe-runner/extension/wallet"
+    },
+    {
+      "action": "metamask.wallet.select_account",
+      "implementation": "@metamask/recipe-runner/extension/wallet"
+    },
+    {
+      "action": "metamask.wallet.navigate",
+      "implementation": "@metamask/recipe-runner/extension/wallet"
+    },
+    {
+      "action": "metamask.wallet.read_state",
+      "implementation": "@metamask/recipe-runner/extension/wallet"
+    },
+    {
+      "action": "metamask.perps.navigate",
+      "implementation": "@metamask/recipe-runner/extension/perps"
+    },
+    {
+      "action": "metamask.perps.read_positions",
+      "implementation": "@metamask/recipe-runner/extension/perps"
+    },
+    {
+      "action": "metamask.perps.read_orders",
+      "implementation": "@metamask/recipe-runner/extension/perps"
+    },
+    {
+      "action": "metamask.perps.close_positions",
+      "implementation": "@metamask/recipe-runner/extension/perps"
+    },
+    {
+      "action": "metamask.perps.close_orders",
+      "implementation": "@metamask/recipe-runner/extension/perps"
+    },
+    {
+      "action": "metamask.perps.place_order",
+      "implementation": "@metamask/recipe-runner/extension/perps"
+    },
+    {
+      "action": "metamask.perps.assert_positions",
+      "implementation": "@metamask/recipe-runner/extension/perps"
+    },
+    {
+      "action": "metamask.perps.assert_orders",
+      "implementation": "@metamask/recipe-runner/extension/perps"
+    },
+    {
+      "action": "metamask.perps.ensure_positions",
+      "implementation": "@metamask/recipe-runner/extension/perps"
+    },
+    {
+      "action": "metamask.perps.ensure_orders",
+      "implementation": "@metamask/recipe-runner/extension/perps"
+    },
+    {
+      "action": "metamask.perps.start_state",
+      "implementation": "@metamask/recipe-runner/extension/perps-domain-dispatcher"
+    },
+    {
+      "action": "metamask.perps.teardown_state",
+      "implementation": "@metamask/recipe-runner/extension/perps-domain-dispatcher"
+    }
+  ],
+  "capability_notes": {
+    "official_action_scope": "This manifest is the executable contract. Recipe Protocol v1 has additional official actions, but unsupported official actions are intentionally absent until implemented and validated on this platform.",
+    "ui_gesture": "Not advertised yet. Drag/swipe must not be used in production recipes until the runner exposes ui.gesture and action-validation proves it on both Mobile and Extension."
+  }
+}

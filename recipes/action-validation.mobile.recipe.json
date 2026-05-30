@@ -1,0 +1,387 @@
+{
+  "schema_version": 1,
+  "title": "MetaMask Mobile v1 action E2E validation",
+  "description": "Exercises every Mobile manifest-declared action against mm-4 and leaves trace output for false-positive checks.",
+  "validate": {
+    "workflow": {
+      "entry": "prepare-files",
+      "nodes": {
+        "prepare-files": {
+          "action": "command",
+          "cmd": "mkdir -p .agent/recipe-action-validation && printf 'E2E_ACTION_VALIDATION mobile\\n' > .agent/recipe-action-validation/probe.txt && printf '{\"platform\":\"mobile\",\"ok\":true}\n' > .agent/recipe-action-validation/probe.json && printf 'mobile log E2E_ACTION_VALIDATION\\n' > .agent/recipe-action-validation/validation.log && echo E2E_ACTION_VALIDATION mobile",
+          "next": "assert-command-exit",
+          "intent": "Prepare action-validation probe files",
+          "detail": "Create local files used to prove command/assert/log/artifact actions.",
+          "flow": "setup"
+        },
+        "assert-command-exit": {
+          "action": "assert_exit_code",
+          "source": "prepare-files",
+          "expected": 0,
+          "next": "assert-command-output",
+          "intent": "Verify the probe command exited successfully",
+          "detail": "Check the previous command exit code.",
+          "flow": "setup"
+        },
+        "assert-command-output": {
+          "action": "assert_output",
+          "source": "prepare-files",
+          "stream": "stdout",
+          "contains": "E2E_ACTION_VALIDATION mobile",
+          "next": "assert-file",
+          "intent": "Verify the probe command produced expected output",
+          "detail": "Check stdout from the previous command.",
+          "flow": "setup"
+        },
+        "assert-file": {
+          "action": "assert_file",
+          "path": ".agent/recipe-action-validation/probe.txt",
+          "contains": "E2E_ACTION_VALIDATION mobile",
+          "next": "assert-json",
+          "intent": "Verify file assertions work",
+          "detail": "Read the probe text file from the project workspace.",
+          "flow": "setup"
+        },
+        "assert-json": {
+          "action": "assert_json",
+          "path": ".agent/recipe-action-validation/probe.json",
+          "assert": {
+            "path": "$.platform",
+            "operator": "eq",
+            "value": "mobile"
+          },
+          "next": "watch-logs",
+          "intent": "Verify JSON assertions work",
+          "detail": "Read the probe JSON file and compare $.platform.",
+          "flow": "setup"
+        },
+        "watch-logs": {
+          "action": "watch_logs",
+          "path": ".agent/recipe-action-validation/validation.log",
+          "contains": "E2E_ACTION_VALIDATION",
+          "next": "index-artifacts",
+          "intent": "Verify log watching works",
+          "detail": "Scan the probe log for the validation marker.",
+          "flow": "setup"
+        },
+        "index-artifacts": {
+          "action": "index_artifacts",
+          "artifacts": [
+            {
+              "path": ".agent/recipe-action-validation/probe.txt",
+              "type": "log",
+              "category": "debug",
+              "label": "Mobile action validation probe"
+            }
+          ],
+          "next": "wait",
+          "intent": "Register the probe file as an artifact",
+          "detail": "Add the validation probe to the run artifact manifest.",
+          "flow": "setup"
+        },
+        "wait": {
+          "action": "wait",
+          "duration_ms": 1,
+          "next": "status",
+          "intent": "Verify the base wait action works",
+          "detail": "Pause briefly before app/runtime checks.",
+          "flow": "setup"
+        },
+        "status": {
+          "action": "app.status",
+          "next": "app-hud",
+          "intent": "Read project runner compatibility status",
+          "detail": "Confirm the app adapter reports its platform and shape.",
+          "flow": "setup"
+        },
+        "cdp-probe": {
+          "action": "cdp.target",
+          "next": "fixture",
+          "required": true,
+          "intent": "Verify the automation channel is reachable",
+          "detail": "Probe CDP/bridge connectivity before UI actions.",
+          "flow": "setup"
+        },
+        "fixture": {
+          "action": "metamask.wallet.fixture_status",
+          "next": "wallet-setup",
+          "intent": "Verify wallet fixture availability",
+          "detail": "Check the preseeded wallet fixture required by validation.",
+          "flow": "wallet"
+        },
+        "wallet-setup": {
+          "action": "metamask.wallet.setup",
+          "next": "wallet-unlock",
+          "intent": "Verify wallet setup is ready",
+          "detail": "Confirm onboarding/fixture state before driving the app.",
+          "flow": "wallet"
+        },
+        "wallet-unlock": {
+          "action": "metamask.wallet.ensure_unlocked",
+          "next": "wallet-read-state",
+          "intent": "Ensure the wallet is unlocked",
+          "detail": "Unlock only if the app is currently locked.",
+          "flow": "wallet"
+        },
+        "wallet-read-state": {
+          "action": "metamask.wallet.read_state",
+          "next": "select-account",
+          "intent": "Read wallet state for proof",
+          "detail": "Capture selected account and network state without mutating UI.",
+          "flow": "wallet"
+        },
+        "select-account": {
+          "action": "metamask.wallet.select_account",
+          "address": "0x8dc623e964475d4d669da601fd15ea9125469003",
+          "next": "app-navigate-wallet",
+          "intent": "Select the validation account",
+          "detail": "Ensure the run uses the configured deterministic account.",
+          "flow": "wallet"
+        },
+        "app-navigate-wallet": {
+          "action": "ui.navigate",
+          "target": "wallet",
+          "next": "ui-wait-wallet",
+          "intent": "Navigate to wallet home",
+          "detail": "Return to a stable wallet starting screen.",
+          "flow": "wallet"
+        },
+        "ui-wait-wallet": {
+          "action": "ui.wait_for",
+          "test_id": "wallet-screen",
+          "expected": "present",
+          "next": "ui-press",
+          "intent": "Wait for wallet UI to be visible",
+          "detail": "Use the generic UI wait action.",
+          "flow": "ui"
+        },
+        "ui-press": {
+          "action": "ui.press",
+          "test_id": "wallet-account-copy-button",
+          "next": "ui-scroll",
+          "intent": "Verify generic press/tap works",
+          "detail": "Drive a harmless UI press through the platform adapter.",
+          "flow": "ui"
+        },
+        "ui-scroll": {
+          "action": "ui.scroll",
+          "test_id": "wallet-screen",
+          "offset": 80,
+          "next": "ui-scroll-into-view",
+          "intent": "Verify generic scroll works",
+          "detail": "Scroll the visible app surface through the platform adapter.",
+          "flow": "ui"
+        },
+        "ui-screenshot-wallet": {
+          "action": "ui.screenshot",
+          "path": "screenshots/mobile-wallet-action-validation.png",
+          "next": "wallet-navigate-perps",
+          "intent": "Capture wallet visual proof",
+          "detail": "Save a screenshot artifact after generic UI actions.",
+          "flow": "ui"
+        },
+        "wallet-navigate-perps": {
+          "action": "metamask.wallet.navigate",
+          "target": "perps",
+          "next": "perps-navigate-home",
+          "intent": "Navigate to Perps through wallet actions",
+          "detail": "Use the MetaMask wallet navigation extension point.",
+          "flow": "ui"
+        },
+        "perps-navigate-home": {
+          "action": "metamask.perps.navigate",
+          "target": "home",
+          "next": "perps-navigate-market",
+          "intent": "Open Perps home",
+          "detail": "Move into the Perps domain starting area.",
+          "flow": "perps"
+        },
+        "perps-navigate-market": {
+          "action": "metamask.perps.navigate",
+          "target": "market",
+          "market": "ETH",
+          "next": "start-state",
+          "intent": "Open the ETH Perps market",
+          "detail": "Navigate to the ETH market used by validation.",
+          "flow": "perps"
+        },
+        "ensure-clean": {
+          "action": "metamask.perps.ensure_positions",
+          "market": "ETH",
+          "next": "ensure-orders-clean",
+          "state": "none",
+          "intent": "Ensure no positions are open",
+          "detail": "Use the reusable Perps position precondition in selected-market cleanup mode.",
+          "flow": "perps setup",
+          "mode": "matching"
+        },
+        "assert-no-position": {
+          "action": "metamask.perps.assert_positions",
+          "market": "ETH",
+          "next": "read-orders-empty",
+          "state": "none",
+          "intent": "Confirm selected ETH position state is clean",
+          "detail": "Assert no position exists before placing a validation order.",
+          "flow": "perps setup",
+          "mode": "matching"
+        },
+        "read-orders-empty": {
+          "action": "metamask.perps.read_orders",
+          "market": "ETH",
+          "next": "assert-no-orders",
+          "intent": "Read order state after cleanup",
+          "detail": "Collect current ETH order state for proof.",
+          "flow": "perps setup"
+        },
+        "place-order": {
+          "action": "metamask.perps.place_order",
+          "market": "ETH",
+          "side": "long",
+          "amount": "11",
+          "leverage": 3,
+          "next": "read-positions",
+          "intent": "Place a small ETH 3x long validation order",
+          "detail": "Create an approximately $11 real Perps position through the runner action.",
+          "flow": "perps validation"
+        },
+        "read-positions": {
+          "action": "metamask.perps.read_positions",
+          "market": "ETH",
+          "next": "assert-position",
+          "intent": "Read ETH position after order placement",
+          "detail": "Collect current ETH position state for proof.",
+          "flow": "perps validation"
+        },
+        "assert-position": {
+          "action": "metamask.perps.assert_positions",
+          "market": "ETH",
+          "next": "read-orders-open",
+          "state": "open",
+          "intent": "Confirm the ETH validation position opened",
+          "detail": "Assert the order produced an open ETH position.",
+          "flow": "perps validation"
+        },
+        "read-orders-open": {
+          "action": "metamask.perps.read_orders",
+          "market": "ETH",
+          "next": "close-orders",
+          "intent": "Read ETH orders before cleanup",
+          "detail": "Collect order state before closing validation artifacts.",
+          "flow": "perps validation"
+        },
+        "assert-closed": {
+          "action": "metamask.perps.assert_positions",
+          "market": "ETH",
+          "next": "teardown-state",
+          "state": "none",
+          "intent": "Confirm global position cleanup completed",
+          "detail": "Assert no selected ETH position remains after cleanup.",
+          "flow": "perps teardown",
+          "mode": "matching"
+        },
+        "done": {
+          "action": "end",
+          "status": "pass",
+          "intent": "Finish action validation successfully",
+          "detail": "Mark the recipe run as passed after all checks complete.",
+          "flow": "teardown"
+        },
+        "ensure-orders-clean": {
+          "action": "metamask.perps.ensure_orders",
+          "market": "ETH",
+          "state": "none",
+          "next": "assert-no-position",
+          "intent": "Ensure no orders are open",
+          "detail": "Use the reusable Perps order precondition in selected-market cleanup mode.",
+          "flow": "perps setup",
+          "mode": "matching"
+        },
+        "assert-no-orders": {
+          "action": "metamask.perps.assert_orders",
+          "market": "ETH",
+          "state": "none",
+          "next": "place-order",
+          "intent": "Confirm selected ETH order state is clean",
+          "detail": "Assert no orders exist before placing a validation order.",
+          "flow": "perps setup",
+          "mode": "matching"
+        },
+        "close-orders": {
+          "action": "metamask.perps.close_orders",
+          "market": "ETH",
+          "next": "close-positions",
+          "intent": "Close ETH orders created by validation",
+          "detail": "Clean up any open ETH orders selected by the recipe parameters.",
+          "flow": "perps teardown"
+        },
+        "close-positions": {
+          "action": "metamask.perps.close_positions",
+          "market": "ETH",
+          "next": "assert-closed",
+          "intent": "Close the ETH validation position",
+          "detail": "Clean up the ETH position selected by the recipe parameters.",
+          "flow": "perps teardown"
+        },
+        "start-state": {
+          "action": "metamask.perps.start_state",
+          "profile": "clean_market_testnet",
+          "market": "ETH",
+          "positions": {
+            "state": "none",
+            "mode": "matching"
+          },
+          "orders": {
+            "state": "none",
+            "mode": "matching"
+          },
+          "page": "market",
+          "next": "ensure-clean",
+          "intent": "Prepare selected-market clean testnet Perps validation state",
+          "detail": "Close existing ETH testnet positions and orders before validation so unrelated leftovers cannot produce false confidence.",
+          "flow": "perps setup",
+          "mode": "matching"
+        },
+        "teardown-state": {
+          "action": "metamask.perps.teardown_state",
+          "market": "ETH",
+          "positions": {
+            "state": "none",
+            "mode": "matching"
+          },
+          "orders": {
+            "state": "none",
+            "mode": "matching"
+          },
+          "page": "home",
+          "next": "done",
+          "intent": "Return Perps to a selected-market clean home state",
+          "detail": "Close remaining ETH positions and orders so the account ends selected-market clean.",
+          "flow": "perps teardown",
+          "mode": "matching"
+        },
+        "app-hud": {
+          "action": "app.hud",
+          "text": "mobile action parity validation",
+          "status": "running",
+          "next": "cdp-probe",
+          "intent": "Start visible recipe progress HUD",
+          "detail": "Show the human reviewer what this validation is doing.",
+          "flow": "setup"
+        },
+        "ui-scroll-into-view": {
+          "action": "ui.scroll",
+          "test_id": "wallet-screen",
+          "scroll_into_view": true,
+          "offset": 40,
+          "next": "ui-screenshot-wallet",
+          "intent": "Bring the wallet screen into view for proof",
+          "detail": "Exercise the Recipe v1 scroll_into_view contract on React Native.",
+          "flow": "ui"
+        }
+      },
+      "teardown": [
+        "If close-positions/close-orders fails, do not claim this validation reusable; explicitly inspect the remaining ETH position."
+      ]
+    }
+  }
+}

@@ -1,0 +1,188 @@
+{
+  "schema_version": 1,
+  "title": "MetaMask Perps lifecycle smoke",
+  "description": "Reusable Recipe v1 smoke that proves a deterministic Perps prestate, opens a small ETH testnet position, verifies it, closes it, and tears down to a clean state.",
+  "validate": {
+    "workflow": {
+      "entry": "status",
+      "nodes": {
+        "status": {
+          "action": "app.status",
+          "intent": "Read runner compatibility status",
+          "detail": "Confirm the selected MetaMask adapter is connected before trading.",
+          "flow": "setup",
+          "next": "fixture"
+        },
+        "fixture": {
+          "action": "metamask.wallet.fixture_status",
+          "intent": "Verify wallet fixture availability",
+          "detail": "Check the preseeded wallet fixture required for deterministic Perps validation.",
+          "flow": "setup",
+          "next": "wallet-setup"
+        },
+        "wallet-setup": {
+          "action": "metamask.wallet.setup",
+          "intent": "Ensure wallet fixture setup is ready",
+          "detail": "Confirm onboarding and fixture state before controlling the app.",
+          "flow": "wallet",
+          "next": "wallet-unlock"
+        },
+        "wallet-unlock": {
+          "action": "metamask.wallet.ensure_unlocked",
+          "intent": "Ensure the wallet is unlocked",
+          "detail": "Unlock only if the app is currently locked.",
+          "flow": "wallet",
+          "next": "select-account"
+        },
+        "select-account": {
+          "action": "metamask.wallet.select_account",
+          "address": "0x8dc623e964475d4d669da601fd15ea9125469003",
+          "intent": "Select the validation account",
+          "detail": "Use the deterministic testnet account shared by mobile and extension.",
+          "flow": "wallet",
+          "next": "wallet-read-state"
+        },
+        "wallet-read-state": {
+          "action": "metamask.wallet.read_state",
+          "intent": "Capture wallet state proof",
+          "detail": "Record selected account/network state before the Perps lifecycle.",
+          "flow": "wallet",
+          "next": "navigate-perps"
+        },
+        "navigate-perps": {
+          "action": "metamask.wallet.navigate",
+          "target": "perps",
+          "intent": "Navigate to Perps",
+          "detail": "Move from wallet context into the Perps surface.",
+          "flow": "perps setup",
+          "next": "navigate-market"
+        },
+        "navigate-market": {
+          "action": "metamask.perps.navigate",
+          "target": "market",
+          "market": "ETH",
+          "intent": "Open the ETH Perps market",
+          "detail": "Use ETH testnet as the deterministic lifecycle market.",
+          "flow": "perps setup",
+          "next": "start-state"
+        },
+        "start-state": {
+          "action": "metamask.perps.start_state",
+          "profile": "clean_market_testnet",
+          "market": "ETH",
+          "positions": {
+            "state": "none",
+            "mode": "matching"
+          },
+          "orders": {
+            "state": "none",
+            "mode": "matching"
+          },
+          "page": "market",
+          "intent": "Prepare clean ETH testnet Perps state",
+          "detail": "Close existing ETH testnet positions and orders before the smoke lifecycle starts.",
+          "flow": "perps setup",
+          "next": "assert-clean-position",
+          "tutorial": {
+            "completed": true
+          }
+        },
+        "assert-clean-position": {
+          "action": "metamask.perps.assert_positions",
+          "market": "ETH",
+          "state": "none",
+          "intent": "Confirm ETH position state is clean",
+          "detail": "Assert lifecycle starts with no ETH Perps position.",
+          "flow": "perps setup",
+          "next": "assert-clean-orders"
+        },
+        "assert-clean-orders": {
+          "action": "metamask.perps.assert_orders",
+          "market": "ETH",
+          "state": "none",
+          "intent": "Confirm ETH order state is clean",
+          "detail": "Assert lifecycle starts with no ETH Perps orders.",
+          "flow": "perps setup",
+          "next": "place-order"
+        },
+        "place-order": {
+          "action": "metamask.perps.place_order",
+          "market": "ETH",
+          "side": "long",
+          "amount": "11",
+          "leverage": 3,
+          "intent": "Open a small ETH 3x long position",
+          "detail": "Place an approximately $11 real testnet market order through the Perps controller.",
+          "flow": "perps lifecycle",
+          "next": "assert-open"
+        },
+        "assert-open": {
+          "action": "metamask.perps.assert_positions",
+          "market": "ETH",
+          "state": "open",
+          "intent": "Confirm the ETH position opened",
+          "detail": "Verify the lifecycle created a real position before cleanup.",
+          "flow": "perps lifecycle",
+          "next": "read-orders"
+        },
+        "read-orders": {
+          "action": "metamask.perps.read_orders",
+          "market": "ETH",
+          "intent": "Read ETH orders before cleanup",
+          "detail": "Collect order state proof before lifecycle teardown.",
+          "flow": "perps lifecycle",
+          "next": "close-orders"
+        },
+        "close-orders": {
+          "action": "metamask.perps.close_orders",
+          "market": "ETH",
+          "intent": "Close ETH orders from the lifecycle",
+          "detail": "Cancel any open ETH orders selected by the recipe parameters.",
+          "flow": "perps teardown",
+          "next": "close-position"
+        },
+        "close-position": {
+          "action": "metamask.perps.close_positions",
+          "market": "ETH",
+          "intent": "Close the ETH lifecycle position",
+          "detail": "Close the position created by this smoke and wait for clean state.",
+          "flow": "perps teardown",
+          "next": "assert-closed"
+        },
+        "assert-closed": {
+          "action": "metamask.perps.assert_positions",
+          "market": "ETH",
+          "state": "none",
+          "intent": "Confirm ETH position cleanup completed",
+          "detail": "Assert no ETH position remains after lifecycle cleanup.",
+          "flow": "perps teardown",
+          "next": "teardown-state"
+        },
+        "teardown-state": {
+          "action": "metamask.perps.teardown_state",
+          "market": "ETH",
+          "positions": {
+            "state": "none",
+            "mode": "matching"
+          },
+          "orders": {
+            "state": "none",
+            "mode": "matching"
+          },
+          "page": "home",
+          "intent": "Return Perps to globally clean home state",
+          "detail": "Close remaining ETH positions and orders so the lifecycle leaves its selected market clean.",
+          "flow": "perps teardown",
+          "next": "done"
+        },
+        "done": {
+          "action": "end",
+          "status": "pass",
+          "intent": "Finish Perps lifecycle smoke",
+          "detail": "The recipe opened and closed a real ETH testnet position.",
+          "flow": "complete"
+        }
+      }
+    }
+  }
+}
