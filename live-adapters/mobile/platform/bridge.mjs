@@ -26,7 +26,7 @@ function bridgeScript(input) {
   return path.join(input.context.projectRoot, 'scripts/perps/agentic/cdp-bridge.js');
 }
 
-function bridgeEnv(input) {
+export function bridgeEnv(input) {
   /** @type {NodeJS.ProcessEnv} */
   const env = {
     ...process.env,

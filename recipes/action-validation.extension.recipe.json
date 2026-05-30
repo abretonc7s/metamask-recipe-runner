@@ -385,10 +385,7 @@
           "detail": "Exercise the Recipe v1 scroll_into_view contract over CDP.",
           "flow": "ui"
         }
-      },
-      "teardown": [
-        "If close-positions/close-orders fails, do not claim this validation reusable; explicitly inspect the remaining ETH position."
-      ]
+      }
     }
   }
 }
