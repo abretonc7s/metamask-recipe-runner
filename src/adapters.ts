@@ -50,6 +50,7 @@ const LIVE_ONLY_PERPS_ACTIONS = new Set([
   'metamask.perps.assert_orders',
   'metamask.perps.start_state',
   'metamask.perps.teardown_state',
+  'metamask.perps.assert_debug_banner',
 ]);
 const LIVE_ONLY_WALLET_ACTIONS = new Set([
   'metamask.wallet.setup',
@@ -220,6 +221,7 @@ function createMetaMaskSemanticAdapters(platform: MetaMaskRecipeAdapter): Action
     'metamask.perps.assert_orders',
     'metamask.perps.start_state',
     'metamask.perps.teardown_state',
+    'metamask.perps.assert_debug_banner',
   ];
   return actions.map((action) => simpleAdapter(action, async (node, context) => semanticResult(platform, action, node, context)));
 }
