@@ -649,7 +649,7 @@ function extensionBannerProbeExpression(input, expectedPresent) {
     var expectedTextColor = ${JSON.stringify(expectedTextColor)};
     var requirePlacement = ${JSON.stringify(requirePlacement)};
     function byTestId(id) { return document.querySelector('[data-testid="' + id.replace(/"/g, '\\"') + '"]'); }
-    function normalizeColor(value) { return String(value || '').trim().toLowerCase().replace(/\s+/g, ''); }
+    function normalizeColor(value) { return String(value || '').trim().toLowerCase().replaceAll(' ', ''); }
     function colorMatches(actual, expected) {
       var a = normalizeColor(actual);
       var e = normalizeColor(expected);
@@ -668,7 +668,9 @@ function extensionBannerProbeExpression(input, expectedPresent) {
     var textOk = text === expectedText;
     var backgroundOk = colorMatches(style.backgroundColor, expectedBackground);
     var textColorOk = colorMatches(style.color, expectedTextColor);
-    var placementOk = !requirePlacement || (targetRect && bannerRect.bottom <= targetRect.top + 1);
+    var domOrderBefore = target ? Boolean(banner.compareDocumentPosition(target) & Node.DOCUMENT_POSITION_FOLLOWING) : false;
+    var bboxBefore = Boolean(targetRect && bannerRect.bottom <= targetRect.top + 1);
+    var placementOk = !requirePlacement || domOrderBefore || bboxBefore;
     return {
       present: true,
       testId: testId,
@@ -677,7 +679,7 @@ function extensionBannerProbeExpression(input, expectedPresent) {
       style: { backgroundColor: style.backgroundColor, color: style.color },
       backgroundOk: backgroundOk,
       textColorOk: textColorOk,
-      placement: { aboveTestId: aboveTestId, targetPresent: Boolean(target), bannerBottom: bannerRect.bottom, targetTop: targetRect ? targetRect.top : null, aboveTarget: placementOk },
+      placement: { aboveTestId: aboveTestId, targetPresent: Boolean(target), bannerBottom: bannerRect.bottom, targetTop: targetRect ? targetRect.top : null, domOrderBefore: domOrderBefore, bboxBefore: bboxBefore, aboveTarget: placementOk },
       assertion: textOk && backgroundOk && textColorOk && placementOk ? 'pass' : 'fail'
     };
   })()`;
