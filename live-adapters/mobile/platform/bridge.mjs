@@ -1,4 +1,5 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 import path from 'node:path';
 
@@ -23,6 +24,8 @@ export async function runAdapter(callback) {
 }
 
 function bridgeScript(input) {
+  const injected = path.join(input.context.projectRoot, '.agent/recipe-harness/mobile/cdp-bridge.js');
+  if (existsSync(injected)) return injected;
   return path.join(input.context.projectRoot, 'scripts/perps/agentic/cdp-bridge.js');
 }
 
