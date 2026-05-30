@@ -120,7 +120,7 @@ live-adapters/mobile/perps/perps.mjs       # shared Mobile Perps operation catal
 live-adapters/extension/perps/perps.mjs    # shared Extension Perps operation catalog
 ```
 
-Future runner resolution should allow a domain dispatcher fallback such as `live-adapters/<platform>/perps/perps.mjs` when an action-specific file is absent. That keeps discoverability in the manifest while avoiding a growing pile of tiny wrapper files.
+Runner resolution supports a domain dispatcher fallback such as `live-adapters/<platform>/perps/perps.mjs` when an action-specific file is absent. That keeps discoverability in the manifest while avoiding a growing pile of tiny wrapper files.
 
 ## Rule of thumb for adding adapter files
 
