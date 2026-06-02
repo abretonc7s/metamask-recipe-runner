@@ -15,8 +15,8 @@
     "check:syntax": "find . -name '*.mjs' -print0 | xargs -0 -n1 node --check"
   },
   "dependencies": {
-    "@farmslot/protocol": "^0.5.0",
-    "@farmslot/recipe-harness": "^0.1.0"
+    "@farmslot/protocol": "^0.6.0",
+    "@farmslot/recipe-harness": "^0.2.0"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
