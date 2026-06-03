@@ -210,6 +210,7 @@ Recommended shape for a proof recipe:
   ],
   "startState": {
     "action": "metamask.perps.start_state",
+    "intent": "Converge Perps to a clean BTC testnet baseline before proof",
     "params": {
       "profile": "perps.clean_market_testnet",
       "market": "BTC",
@@ -222,6 +223,7 @@ Recommended shape for a proof recipe:
     "nodes": {
       "ac-specific-step": {
         "action": "ui.press",
+        "intent": "Perform the AC-specific Perps interaction through the UI",
         "test_id": "example",
         "record": "proof_window"
       }

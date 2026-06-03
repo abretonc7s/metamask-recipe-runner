@@ -1,22 +1,25 @@
 {
   "schema_version": 1,
   "title": "MetaMask Extension v1 runner smoke",
-  "description": "Proves the MetaMask Extension runner executes manifest-declared v1 actions and writes a valid artifact package.",
+  "description": "Proves the MetaMask Extension runner executes manifest-declared actions and writes a valid artifact package.",
   "validate": {
     "workflow": {
       "entry": "status",
       "nodes": {
         "status": {
           "action": "app.status",
-          "next": "fixture"
+          "next": "fixture",
+          "intent": "Perform status for the recipe"
         },
         "fixture": {
           "action": "metamask.wallet.fixture_status",
-          "next": "cdp"
+          "next": "cdp",
+          "intent": "Perform fixture for the recipe"
         },
         "cdp": {
           "action": "cdp.target",
-          "next": "done"
+          "next": "done",
+          "intent": "Perform cdp for the recipe"
         },
         "done": {
           "action": "end",

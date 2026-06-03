@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "title": "MetaMask Extension v1 action E2E validation",
+  "title": "MetaMask Extension action E2E validation",
   "description": "Exercises every Extension manifest-declared action against mme-4 and leaves trace output for false-positive checks.",
   "validate": {
     "workflow": {

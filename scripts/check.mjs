@@ -120,6 +120,9 @@ function validateCommittedRecipes() {
       path.join(runnerDir, 'manifests/extension.action-manifest.json'),
     ),
   };
+  for (const [adapter, manifest] of Object.entries(manifests)) {
+    validateManifestExamples(manifest, adapter);
+  }
   const allActions = new Set([
     ...manifestActions(manifests.mobile),
     ...manifestActions(manifests.extension),
@@ -135,6 +138,48 @@ function validateCommittedRecipes() {
       process.exit(1);
     }
   }
+}
+
+function validateManifestExamples(manifest, adapter) {
+  const actions = manifestActions(manifest);
+  const failures = [];
+  for (const [action, metadata] of Object.entries(manifest.action_metadata || {})) {
+    validateExampleNodes(metadata, `manifests.${adapter}.action_metadata.${action}`, actions, failures);
+  }
+  for (const [index, customAction] of (manifest.custom_actions || []).entries()) {
+    validateExampleNodes(
+      customAction,
+      `manifests.${adapter}.custom_actions[${index}]`,
+      actions,
+      failures,
+    );
+  }
+  if (failures.length > 0) {
+    console.error(`Invalid manifest examples for ${adapter}:`);
+    for (const failure of failures) console.error(`  - ${failure}`);
+    process.exit(1);
+  }
+}
+
+function validateExampleNodes(container, label, actions, failures) {
+  if (!container || typeof container !== 'object' || Array.isArray(container)) return;
+  if (!Array.isArray(container.examples)) return;
+  container.examples.forEach((example, index) => {
+    const node = example?.node;
+    if (!node || typeof node !== 'object' || Array.isArray(node)) return;
+    validateExampleNode(node, `${label}.examples[${index}].node`, actions, failures);
+  });
+}
+
+function validateExampleNode(node, label, actions, failures) {
+  if (typeof node.action !== 'string' || node.action.length === 0) {
+    failures.push(`${label}.action must be a non-empty string`);
+    return;
+  }
+  if (!actions.has(node.action)) {
+    failures.push(`${label}.action is not declared by the manifest: ${node.action}`);
+  }
+  if (node.action !== 'end') validateIntent(node, label, failures);
 }
 
 function readJson(file) {
@@ -222,6 +267,7 @@ function validateNode(node, label, actions, nodes, failures, options = {}) {
   }
   if (!actions.has(node.action))
     failures.push(`${label}.action is not manifest-declared: ${node.action}`);
+  if (node.action !== 'end') validateIntent(node, label, failures);
   if (options.lifecycle) {
     if (node.next != null || node.default != null || node.cases != null) {
       failures.push(
@@ -239,6 +285,63 @@ function validateNode(node, label, actions, nodes, failures, options = {}) {
       failures.push(`${label} references missing target: ${target}`);
     }
   }
+}
+
+function validateIntent(node, label, failures) {
+  if (!isNonEmptyString(node.intent)) {
+    failures.push(
+      `${label}.intent is required: add one short HUD/trace sentence describing what the agent is doing now, for example "Open the Perps market screen"`,
+    );
+    return;
+  }
+  const normalized = normalizeIntent(node.intent);
+  const blocked = [
+    node.action,
+    node.selector,
+    node.test_id,
+    node.testID,
+    node.id,
+    node.ref,
+    path.basename(label),
+  ]
+    .filter(isNonEmptyString)
+    .map(normalizeIntent);
+  if (
+    isGenericIntent(normalized) ||
+    blocked.includes(normalized) ||
+    normalized === 'test id' ||
+    normalized === 'selector' ||
+    normalized === 'node id'
+  ) {
+    failures.push(
+      `${label}.intent must be one short HUD/trace sentence for what the agent is doing now; do not use generic text, action names, node ids, selectors, or test ids`,
+    );
+  }
+}
+
+function isGenericIntent(value) {
+  return [
+    'executing recipe step',
+    'run',
+    'setup',
+    'ui',
+    'wallet',
+    'perps',
+    'test',
+    'step',
+    'execute',
+    'click',
+    'press',
+    'wait',
+    'screenshot',
+    'capture',
+    'assert',
+    'command',
+  ].includes(value);
+}
+
+function normalizeIntent(value) {
+  return value.trim().toLowerCase().replace(/[_-]+/g, ' ').replace(/\s+/g, ' ');
 }
 
 function collectTargets(node) {

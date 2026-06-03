@@ -28,14 +28,7 @@ cases, keep the recipe small and use:
 
 ## HUD intent contract
 
-The Recipe v1 HUD is the agent-to-human communication channel during live runs and proof recordings. It must be easy to understand at a glance:
-
-- `intent` says what the agent is trying to do now, e.g. `Open a small ETH long position`.
-- Do not use `intent` for action names, domains, node ids, selectors, test ids, or generic labels like `ui`, `wallet`, `perps`, `setup`, or `run`.
-- The default HUD shows one line: status/progress plus the current intent.
-- A second intent is allowed only for composed subflows via explicit `sub_intent`/`subIntent` and `display.showSubflow: true`.
-- `detail` is optional trace/review metadata and is hidden from the default HUD. Use `display.showDetail: true` only when a project deliberately wants that extra line.
-- Node id, action name, proof target, and flow/domain are trace/debug metadata and require `display.showDebug: true` to be visible.
+Every non-terminal recipe node must include `intent`. The default HUD shows status/progress plus exactly one current intent line. `detail` is hidden unless explicitly configured, errors may appear as the only secondary line, and flow/call nesting stays trace/debug metadata. Mobile uses the same structured HUD payload as Extension when the in-app bridge supports it, with a legacy `show-step` fallback for older checkouts.
 
 ## Proof interaction contract
 
@@ -83,6 +76,8 @@ checkout named `metamask-recipe-runner` next to `metamask-skills`.
 ```bash
 bin/metamask-recipe manifest --adapter mobile --json
 bin/metamask-recipe manifest --adapter extension --json
+bin/metamask-recipe actions --adapter mobile --json
+bin/metamask-recipe actions --adapter extension --action ui.press --json
 bin/metamask-recipe doctor --adapter mobile --target /path/to/metamask-mobile --json
 bin/metamask-recipe run recipes/smoke.mobile.recipe.json --adapter mobile --target /path/to/metamask-mobile --artifacts-dir /tmp/mm-smoke --json
 bin/metamask-recipe self-test --artifacts-dir /tmp/metamask-runner-self-test --json
@@ -108,7 +103,7 @@ only an ignored `.tmp/tsconfig.check.json`.
 
 ## Recipe quality follow-up: composed start states
 
-The current runner proves v1 action execution. Recipe v1 should not be treated as production-complete until the runner also publishes reusable flow catalogs for setup/start-state composition. The intended model is:
+The current runner proves manifest-declared action execution. Recipe v1 should not be treated as production-complete until the runner also publishes reusable flow catalogs for setup/start-state composition. The intended model is:
 
 ```text
 metamask.wallet.ensure_unlocked

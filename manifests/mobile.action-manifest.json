@@ -28,7 +28,8 @@
         {
           "node": {
             "action": "command",
-            "cmd": "pwd"
+            "cmd": "pwd",
+            "intent": "Run a shell command from the project root"
           }
         }
       ]
@@ -39,7 +40,8 @@
         {
           "node": {
             "action": "wait",
-            "duration_ms": 1
+            "duration_ms": 1,
+            "intent": "Base wait action"
           }
         }
       ]
@@ -50,7 +52,8 @@
         {
           "node": {
             "action": "watch_logs",
-            "path": "logs/app.log"
+            "path": "logs/app.log",
+            "intent": "Base log assertion/capture action"
           }
         }
       ]
@@ -61,7 +64,8 @@
         {
           "node": {
             "action": "index_artifacts",
-            "artifacts": []
+            "artifacts": [],
+            "intent": "Base artifact copier/indexer"
           }
         }
       ]
@@ -83,7 +87,8 @@
         {
           "node": {
             "action": "ui.press",
-            "target": "Perps"
+            "target": "Perps",
+            "intent": "Press/tap/click a UI target through the platform adapter"
           }
         }
       ]
@@ -94,7 +99,8 @@
         {
           "node": {
             "action": "ui.scroll",
-            "delta_y": 300
+            "delta_y": 300,
+            "intent": "Scroll through the UI through the Farmslot base platform adapter. Supports deltas and scroll_into_view for selector/test-id proof positioning"
           }
         },
         {
@@ -102,7 +108,8 @@
           "node": {
             "action": "ui.scroll",
             "test_id": "wallet-screen",
-            "scroll_into_view": true
+            "scroll_into_view": true,
+            "intent": "Bring a React Native testID into view before screenshot proof"
           }
         }
       ],
@@ -114,7 +121,8 @@
         {
           "node": {
             "action": "ui.wait_for",
-            "text": "Perps"
+            "text": "Perps",
+            "intent": "Wait for a UI condition through the platform adapter"
           }
         }
       ]
@@ -125,7 +133,8 @@
         {
           "node": {
             "action": "ui.screenshot",
-            "path": "screenshots/example.json"
+            "path": "screenshots/example.json",
+            "intent": "Capture visual evidence through the platform adapter"
           }
         }
       ]
@@ -137,7 +146,8 @@
           "node": {
             "action": "assert_file",
             "path": "reports/result.txt",
-            "contains": "ok"
+            "contains": "ok",
+            "intent": "Assert that a project file exists and optionally contains text"
           }
         }
       ]
@@ -153,7 +163,8 @@
               "path": "$.status",
               "operator": "eq",
               "value": "ok"
-            }
+            },
+            "intent": "Assert a JSON file value with a JSONPath-style selector"
           }
         }
       ]
@@ -165,7 +176,8 @@
           "node": {
             "action": "assert_exit_code",
             "source": "run-tests",
-            "expected": 0
+            "expected": 0,
+            "intent": "Assert the exit code captured from a command node output"
           }
         }
       ]
@@ -178,7 +190,8 @@
             "action": "assert_output",
             "source": "run-tests",
             "stream": "stdout",
-            "contains": "PASS"
+            "contains": "PASS",
+            "intent": "Assert stdout or stderr captured from a command node output"
           }
         }
       ]
@@ -197,25 +210,69 @@
               "total": 19
             }
           }
-        },
-        {
-          "description": "Explicit composed subflow context",
-          "node": {
-            "action": "app.hud",
-            "status": "running",
-            "intent": "Open a small ETH long position",
-            "sub_intent": "Validate Perps lifecycle smoke",
-            "display": {
-              "showSubflow": true
-            },
-            "progress": {
-              "current": 12,
-              "total": 19
-            }
-          }
         }
       ],
-      "safety_notes": "HUD is reviewer feedback only. It must not mutate product state or carry task assertions; trace/artifacts remain authoritative."
+      "safety_notes": "HUD is reviewer feedback only. It must not mutate product state or carry task assertions; trace/artifacts remain authoritative.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "running",
+              "pass",
+              "fail"
+            ]
+          },
+          "intent": {
+            "type": "string"
+          },
+          "progress": {
+            "type": "object",
+            "properties": {
+              "current": {
+                "type": "number"
+              },
+              "total": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "current",
+              "total"
+            ]
+          },
+          "detail": {
+            "type": "string"
+          },
+          "error": {
+            "type": "string"
+          },
+          "display": {
+            "type": "object",
+            "properties": {
+              "showDetail": {
+                "type": "boolean"
+              },
+              "showDebug": {
+                "type": "boolean"
+              },
+              "showTitle": {
+                "type": "boolean"
+              },
+              "layout": {
+                "type": "string"
+              },
+              "position": {
+                "type": "string"
+              }
+            }
+          },
+          "clear": {
+            "type": "boolean"
+          }
+        }
+      }
     },
     "ui.set_input": {
       "description": "Set text on a React Native TextInput by testID through the app control bridge.",
@@ -245,7 +302,8 @@
           "node": {
             "action": "ui.set_input",
             "test_id": "network-selector-network-search-input",
-            "value": "Sepolia"
+            "value": "Sepolia",
+            "intent": "Set text on a React Native TextInput by testID through the app control bridge"
           }
         }
       ]
@@ -271,7 +329,8 @@
         {
           "description": "Minimal node",
           "node": {
-            "action": "metamask.wallet.fixture_status"
+            "action": "metamask.wallet.fixture_status",
+            "intent": "Check wallet fixture status"
           }
         }
       ],
@@ -297,7 +356,8 @@
         {
           "description": "Minimal node",
           "node": {
-            "action": "metamask.wallet.setup"
+            "action": "metamask.wallet.setup",
+            "intent": "Prepare the wallet fixture for recipe execution"
           }
         }
       ],
@@ -323,7 +383,8 @@
         {
           "description": "Minimal node",
           "node": {
-            "action": "metamask.wallet.ensure_unlocked"
+            "action": "metamask.wallet.ensure_unlocked",
+            "intent": "Ensure the wallet is unlocked before proof steps"
           }
         }
       ],
@@ -379,14 +440,16 @@
           "description": "Select by deterministic fixture address",
           "node": {
             "action": "metamask.wallet.select_account",
-            "address": "0x8dc623e964475d4d669da601fd15ea9125469003"
+            "address": "0x8dc623e964475d4d669da601fd15ea9125469003",
+            "intent": "Select the requested wallet account"
           }
         },
         {
           "description": "Select by fixture display name",
           "node": {
             "action": "metamask.wallet.select_account",
-            "name": "dev1"
+            "name": "dev1",
+            "intent": "Select the requested wallet account"
           }
         }
       ],
@@ -412,7 +475,8 @@
         {
           "description": "Minimal node",
           "node": {
-            "action": "metamask.wallet.read_state"
+            "action": "metamask.wallet.read_state",
+            "intent": "Read wallet state needed for the proof"
           }
         }
       ],
@@ -484,7 +548,8 @@
           "description": "Read selected live state",
           "node": {
             "action": "metamask.perps.read_positions",
-            "market": "BTC"
+            "market": "BTC",
+            "intent": "Read Perps positions needed for the proof"
           }
         }
       ],
@@ -556,7 +621,8 @@
           "description": "Read selected live state",
           "node": {
             "action": "metamask.perps.read_orders",
-            "market": "BTC"
+            "market": "BTC",
+            "intent": "Read Perps open orders needed for the proof"
           }
         }
       ],
@@ -628,7 +694,8 @@
           "description": "Close every open position",
           "node": {
             "action": "metamask.perps.close_positions",
-            "mode": "all"
+            "mode": "all",
+            "intent": "Close selected Perps positions before continuing"
           }
         },
         {
@@ -638,7 +705,8 @@
             "markets": [
               "BTC",
               "ETH"
-            ]
+            ],
+            "intent": "Close selected Perps positions before continuing"
           }
         }
       ],
@@ -710,14 +778,16 @@
           "description": "Cancel every open order",
           "node": {
             "action": "metamask.perps.close_orders",
-            "mode": "all"
+            "mode": "all",
+            "intent": "Cancel selected Perps orders before continuing"
           }
         },
         {
           "description": "Cancel BTC orders only",
           "node": {
             "action": "metamask.perps.close_orders",
-            "market": "BTC"
+            "market": "BTC",
+            "intent": "Cancel selected Perps orders before continuing"
           }
         }
       ],
@@ -807,7 +877,8 @@
             "market": "BTC",
             "side": "long",
             "notional": "10",
-            "leverage": 2
+            "leverage": 2,
+            "intent": "Place the requested Perps order"
           }
         }
       ],
@@ -891,7 +962,8 @@
           "node": {
             "action": "metamask.perps.assert_positions",
             "state": "open",
-            "market": "BTC"
+            "market": "BTC",
+            "intent": "Assert the expected Perps position state"
           }
         }
       ],
@@ -975,7 +1047,8 @@
           "node": {
             "action": "metamask.perps.assert_orders",
             "state": "none",
-            "market": "BTC"
+            "market": "BTC",
+            "intent": "Assert the expected Perps open order state"
           }
         }
       ],
@@ -1059,7 +1132,8 @@
           "node": {
             "action": "metamask.perps.ensure_positions",
             "state": "none",
-            "market": "BTC"
+            "market": "BTC",
+            "intent": "Converge Perps positions to the requested state"
           }
         },
         {
@@ -1067,7 +1141,8 @@
           "node": {
             "action": "metamask.perps.ensure_positions",
             "state": "none",
-            "mode": "all"
+            "mode": "all",
+            "intent": "Converge Perps positions to the requested state"
           }
         }
       ],
@@ -1151,7 +1226,8 @@
           "node": {
             "action": "metamask.perps.ensure_orders",
             "state": "none",
-            "mode": "all"
+            "mode": "all",
+            "intent": "Converge Perps orders to the requested state"
           }
         }
       ],
@@ -1260,7 +1336,8 @@
             },
             "orders": {
               "state": "none"
-            }
+            },
+            "intent": "Prepare the Perps start state for the proof"
           }
         },
         {
@@ -1274,7 +1351,8 @@
               "state": "open",
               "notional": "10",
               "leverage": 2
-            }
+            },
+            "intent": "Prepare the Perps start state for the proof"
           }
         }
       ],
@@ -1383,14 +1461,16 @@
             "orders": {
               "state": "none"
             },
-            "page": "home"
+            "page": "home",
+            "intent": "Restore Perps state after the proof"
           }
         },
         {
           "description": "Teardown only state created by selected market",
           "node": {
             "action": "metamask.perps.teardown_state",
-            "market": "BTC"
+            "market": "BTC",
+            "intent": "Restore Perps state after the proof"
           }
         }
       ],

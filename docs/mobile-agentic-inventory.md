@@ -23,7 +23,7 @@ PR2 invariant: Farmslot recipe protocol v1 is the single recipe schema and `@far
 
 The runner now provides Mobile live adapters under grouped `live-adapters/mobile/{platform,ui,wallet,perps}/` modules. These adapters call the existing Mobile CDP bridge as a transport/helper only; they do not call `validate-recipe.js`, `lib/workflow.js`, `lib/registry.js`, or the product-local schema validator.
 
-| v1 action | Product bridge/API used | Notes |
+| Runner action | Product bridge/API used | Notes |
 |---|---|---|
 | `ui.navigate` with raw route/hash values for Perps/home | `cdp-bridge.js navigate PerpsHomeView` | Raw navigation transport only; the agent supplies route/hash params and graph execution remains in Farmslot v1. |
 | `ui.navigate` with raw route/hash values for a market | `cdp-bridge.js navigate PerpsMarketDetails` | Passes raw React Navigation params such as `{ market: { symbol } }`, or the matching extension hash. |
@@ -36,6 +36,7 @@ The runner now provides Mobile live adapters under grouped `live-adapters/mobile
 | `metamask.perps.place_order` | `PerpsController.placeOrder(...)` | Supported product API path; no Redux/DOM/local-storage mutation. |
 | `ui.press`, `ui.scroll`, `ui.wait_for` | Farmslot `createStandardUiAdapters({ transport })` -> Farmslot React Native base transport -> Mobile bridge commands (`press-test-id`, `scroll-view`, fiber/eval wait) | Official action semantics live in Farmslot; Mobile only supplies runtime bridge binding. |
 | `ui.screenshot` | `xcrun simctl io <simulator> screenshot` on iOS; `adb exec-out screencap -p` on Android | Real simulator/device screenshot artifact. |
+| `app.hud` | `cdp-bridge.js show-step-json` when available; legacy `show-step` fallback | Structured HUD payload aligns with Extension/Expo: status/progress badge, one current `intent`, optional error/detail/debug only. |
 
 Task-specific visual styling proof does not belong in `metamask.perps.*`; use `ui.wait_for` for reusable testID/text presence and attach screenshots or task-local validation artifacts for ticket-specific color/order claims.
 

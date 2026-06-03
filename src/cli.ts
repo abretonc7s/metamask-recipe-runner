@@ -38,6 +38,7 @@ interface RuntimeOptions {
 
 const COMMANDS: Record<string, (args: ParsedArgs) => Promise<number>> = {
   manifest: handleManifest,
+  actions: handleActions,
   doctor: handleDoctor,
   'runtime-health': handleRuntimeHealth,
   'runtime-decision': handleRuntimeDecision,
@@ -50,6 +51,7 @@ const COMMANDS: Record<string, (args: ParsedArgs) => Promise<number>> = {
 function usage() {
   console.error(`Usage:
   metamask-recipe manifest --adapter <mobile|extension> [--json]
+  metamask-recipe actions --adapter <mobile|extension> [--action <name>] [--json]
   metamask-recipe doctor --adapter <mobile|extension> --target <repo> [--json]
   metamask-recipe runtime-health --adapter extension --target <repo> --cdp-port <port> [--json]
   metamask-recipe runtime-decision --adapter extension --target <repo> [--cdp-port <port>] [--watch-log <path>] [--record] [--json]
@@ -218,6 +220,23 @@ async function handleManifest({ options }: ParsedArgs): Promise<number> {
   return 0;
 }
 
+async function handleActions({ options }: ParsedArgs): Promise<number> {
+  const adapter = adapterOption(options);
+  const manifest = loadActionManifest(adapter, optionString(options, 'actionManifest'));
+  await validateManifest(manifest);
+  const action = optionString(options, 'action');
+  const actions = describeManifestActions(manifest, action);
+  if (optionFlag(options, 'json')) {
+    console.log(JSON.stringify({ adapter, actions }, null, 2));
+  } else {
+    for (const entry of actions) {
+      const fields = entry.fields.length ? ` fields=${entry.fields.join(',')}` : '';
+      console.log(`${entry.name} (${entry.kind})${fields}${entry.description ? ` — ${entry.description}` : ''}`);
+    }
+  }
+  return 0;
+}
+
 async function handleDoctor({ options }: ParsedArgs): Promise<number> {
   const adapter = adapterOption(options);
   const target = targetPath(options);
@@ -228,6 +247,72 @@ async function handleDoctor({ options }: ParsedArgs): Promise<number> {
   if (optionFlag(options, 'json')) console.log(JSON.stringify(result, null, 2));
   else console.log(`${result.status} ${adapter} ${result.compatibilityMode} manifest=${actionManifestPath}`);
   return result.status === 'pass' ? 0 : 1;
+}
+
+function describeManifestActions(
+  manifest: unknown,
+  filterAction?: string,
+): Array<{
+  name: string;
+  kind: 'official' | 'custom';
+  description: string;
+  fields: string[];
+  schema?: unknown;
+  examples?: unknown;
+}> {
+  const manifestRecord = isRecord(manifest) ? manifest : {};
+  const metadata = isRecord(manifestRecord.action_metadata) ? manifestRecord.action_metadata : {};
+  const official = Array.isArray(manifestRecord.supported_official_actions)
+    ? manifestRecord.supported_official_actions.filter((value): value is string => typeof value === 'string')
+    : [];
+  const custom = Array.isArray(manifestRecord.custom_actions)
+    ? manifestRecord.custom_actions.flatMap((entry) => {
+        if (typeof entry === 'string') return [{ name: entry, metadata: metadata[entry] }];
+        if (isRecord(entry) && typeof entry.name === 'string') {
+          const entryMetadata = { ...entry };
+          const metadataOverride = metadata[entry.name];
+          if (isRecord(metadataOverride)) Object.assign(entryMetadata, metadataOverride);
+          return [{ name: entry.name, metadata: entryMetadata }];
+        }
+        return [];
+      })
+    : [];
+  const entries = [
+    ...official.map((name) => describeManifestAction(name, 'official' as const, metadata[name])),
+    ...custom.map((entry) => describeManifestAction(entry.name, 'custom' as const, entry.metadata)),
+  ].filter((entry) => !filterAction || entry.name === filterAction);
+  if (filterAction && entries.length === 0) throw new Error(`Action not found in manifest: ${filterAction}`);
+  return entries;
+}
+
+function describeManifestAction(
+  name: string,
+  kind: 'official' | 'custom',
+  metadata: unknown,
+): {
+  name: string;
+  kind: 'official' | 'custom';
+  description: string;
+  fields: string[];
+  schema?: unknown;
+  examples?: unknown;
+} {
+  const record = isRecord(metadata) ? metadata : {};
+  const schema = record.schema;
+  const schemaRecord = isRecord(schema) ? schema : {};
+  const properties = isRecord(schemaRecord.properties) ? Object.keys(schemaRecord.properties).sort() : [];
+  return {
+    name,
+    kind,
+    description: typeof record.description === 'string' ? record.description : '',
+    fields: properties,
+    schema,
+    examples: record.examples,
+  };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 async function handleRuntimeHealth({ options }: ParsedArgs): Promise<number> {

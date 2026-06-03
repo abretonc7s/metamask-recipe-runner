@@ -415,7 +415,7 @@ async function handleMobileHud(payload: ActionNode, context: ActionExecutionCont
   const input = mobileUiInput(context, 'hud', payload);
   if (payload.clear === true) return bridgeCommand(input, ['hide-step']);
   const hud = mobileHudPayload(payload, context);
-  const result = await bridgeCommand(input, ['show-step', hud.displayId || hud.nodeId, hud.description]);
+  const result = await bridgeCommand(input, ['show-step-json', JSON.stringify(hud.step)]);
   return { hud: true, nodeId: hud.nodeId, status: hud.status, result };
 }
 
@@ -426,67 +426,55 @@ function animatedFlag(payload: ActionNode): string {
 function mobileHudPayload(payload: ActionNode, context: ActionExecutionContext) {
   const nodeId = scalarText(payload.node_id ?? payload.nodeId, 'app.hud.node_id', context.nodeId);
   const status = scalarText(payload.status, 'app.hud.status', 'running');
-  const subIntent = scalarText(payload.sub_intent ?? payload.subIntent, 'app.hud.sub_intent', '');
-  const text = scalarText(payload.intent ?? payload.text ?? payload.detail, 'app.hud.intent', 'Executing recipe step');
+  const text = optionalScalarText(payload.intent ?? payload.text ?? payload.detail, 'app.hud.intent');
+  if (!text || !text.trim()) {
+    throw new Error('app.hud requires intent/text/detail; automatic recipe progress should provide node intent.');
+  }
   const detail = scalarText(payload.detail, 'app.hud.detail', '');
   const error = scalarText(payload.error, 'app.hud.error', '');
-  const progressText = mobileHudProgressText(payload.progress);
+  const progress = mobileHudProgress(payload.progress);
   const display = isRecord(payload.display) ? payload.display : {};
-  const parts = mobileHudDescriptionParts({
-    text,
-    detail,
-    error,
-    subIntent,
-    nodeId,
-    proofTarget: payload.proofTarget ?? payload.proof_target,
-    showDebug: display.showDebug === true,
-    showDetail: display.showDetail === true,
-    showSubflow: display.showSubflow === true,
-  });
+  const showDebug = display.showDebug === true;
+  const showDetail = display.showDetail === true;
+  const proofTarget = payload.proofTarget ?? payload.proof_target;
+  const displayId = [mobileHudStatusLabel(status), progress.text].filter(Boolean).join(' ');
   return {
     nodeId,
     status,
-    displayId: [mobileHudStatusLabel(status), progressText].filter(Boolean).join(' '),
-    description: parts.join('\n'),
+    step: {
+      id: displayId || nodeId,
+      nodeId,
+      status,
+      intent: text,
+      progress: progress.value,
+      detail: showDetail && detail !== text ? detail : undefined,
+      error: error || undefined,
+      debug: showDebug
+        ? {
+            nodeId,
+            proofTarget,
+          }
+        : undefined,
+    },
   };
 }
 
-function mobileHudProgressText(progress: unknown): string {
-  if (!isRecord(progress)) return '';
-  if (typeof progress.current !== 'number' || typeof progress.total !== 'number') return '';
-  return `${progress.current}/${progress.total}`;
+function mobileHudProgress(progress: unknown): {
+  text: string;
+  value?: { current: number; total: number };
+} {
+  if (!isRecord(progress)) return { text: '' };
+  if (typeof progress.current !== 'number' || typeof progress.total !== 'number') return { text: '' };
+  return {
+    text: `${progress.current}/${progress.total}`,
+    value: { current: progress.current, total: progress.total },
+  };
 }
 
 function mobileHudStatusLabel(status: string): string {
   if (status === 'fail') return 'fail';
   if (status === 'pass') return 'pass';
   return 'run';
-}
-
-function mobileHudDescriptionParts(input: {
-  text: string;
-  detail: string;
-  error: string;
-  subIntent: string;
-  nodeId: string;
-  proofTarget: unknown;
-  showDebug: boolean;
-  showDetail: boolean;
-  showSubflow: boolean;
-}): string[] {
-  const parts = [
-    input.text,
-    hudLine(input.showSubflow && input.subIntent !== input.text && input.subIntent !== input.detail, 'subflow', input.subIntent),
-    hudLine(input.showDetail && input.detail !== input.text && input.detail !== input.subIntent, 'detail', input.detail),
-    hudLine(Boolean(input.error), 'error', input.error),
-    hudLine(input.showDebug, 'debug node', input.nodeId),
-    hudLine(input.showDebug, 'debug proof', traceText(input.proofTarget)),
-  ].filter((part): part is string => typeof part === 'string' && part.length > 0);
-  return [...new Set(parts)];
-}
-
-function hudLine(enabled: boolean, label: string, value: string): string | null {
-  return enabled && value ? `${label}: ${value}` : null;
 }
 
 export function createMetaMaskUiTransport(
