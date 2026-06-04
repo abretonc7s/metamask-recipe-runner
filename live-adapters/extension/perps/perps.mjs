@@ -82,6 +82,10 @@ export async function readOrders(input) {
 
 export async function assertPositions(input, expectedOpen) {
   return withExtensionPage(input, async (page) => {
+    const timeoutMs = Number(input.node?.timeout_ms ?? 0);
+    if (expectedOpen && timeoutMs > 0) {
+      await waitForPositionPresent(page, marketSymbol(input), timeoutMs);
+    }
     const state = await page.readPositions();
     if (!state.available) throw new Error('stateHooks.submitRequestToBackground is unavailable; cannot assert live Perps positions.');
     const matching = selectedItems(input, state.positions);
@@ -230,24 +234,28 @@ async function readCurrentMarketPrice(page, symbol, explicitPrice) {
     function bySymbol(item) {
       return item?.symbol === symbol || item?.coin === symbol;
     }
+    if (typeof request === 'function') {
+      const markets = await request('perpsGetMarketDataWithPrices', []);
+      const market = Array.isArray(markets) ? markets.find(bySymbol) : null;
+      const fromMarket = parsePrice(
+        market?.oraclePrice ?? market?.oraclePx ?? market?.markPrice ?? market?.currentPrice ?? market?.price,
+      );
+      if (fromMarket) return { price: fromMarket, source: 'perpsGetMarketDataWithPrices' };
+    }
+    const streamPrices = manager?.prices?.cache;
+    const streamPrice = Array.isArray(streamPrices) ? streamPrices.find(bySymbol) : null;
+    const fromStream = parsePrice(
+      streamPrice?.oraclePrice ?? streamPrice?.oraclePx ?? streamPrice?.markPrice ?? streamPrice?.price,
+    );
+    if (fromStream) return { price: fromStream, source: 'perps-stream-manager-prices' };
     const visibleSelectors = [
+      '[data-testid="perps-market-detail-oracle-price"]',
       '[data-testid="perps-order-entry-price"]',
       '[data-testid="perps-market-detail-price"]',
-      '[data-testid="perps-market-detail-oracle-price"]',
     ];
     for (const selector of visibleSelectors) {
       const fromDom = parsePrice(document.querySelector(selector)?.innerText);
       if (fromDom) return { price: fromDom, source: selector };
-    }
-    const streamPrices = manager?.prices?.cache;
-    const streamPrice = Array.isArray(streamPrices) ? streamPrices.find(bySymbol) : null;
-    const fromStream = parsePrice(streamPrice?.price ?? streamPrice?.markPrice ?? streamPrice?.oraclePrice);
-    if (fromStream) return { price: fromStream, source: 'perps-stream-manager-prices' };
-    if (typeof request === 'function') {
-      const markets = await request('perpsGetMarketDataWithPrices', []);
-      const market = Array.isArray(markets) ? markets.find(bySymbol) : null;
-      const fromMarket = parsePrice(market?.markPrice ?? market?.oraclePrice ?? market?.currentPrice ?? market?.price);
-      if (fromMarket) return { price: fromMarket, source: 'perpsGetMarketDataWithPrices' };
     }
     const body = document.body?.innerText || '';
     const line = body.split('\n').find((text) => /\$[0-9][0-9,]*(?:\.[0-9]+)?/.test(text));
@@ -353,14 +361,29 @@ export async function placeOrder(input) {
   const amount = String(input.node?.amount ?? input.node?.notional ?? '11');
   const leverage = Number(input.node?.leverage ?? 3);
   return withExtensionPage(input, async (page) => {
+    await page.navigateHash(`#/perps/market/${encodeURIComponent(symbol)}`);
+    await page.evaluate(`(async () => {
+      const request = globalThis.stateHooks?.submitRequestToBackground;
+      if (typeof request !== 'function') return;
+      const state = globalThis.stateHooks?.store?.getState?.()?.metamask;
+      if (state && state.isTestnet === false) {
+        await request('perpsToggleTestnet', []);
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+      }
+    })()`, { awaitPromise: true });
+    const resolvedPrice = await readCurrentMarketPrice(
+      page,
+      symbol,
+      input.node?.current_price ?? input.node?.currentPrice,
+    );
     await page.navigateHash(`#/perps/trade/${encodeURIComponent(symbol)}?direction=${encodeURIComponent(side)}&mode=new`);
     await page.waitForSelector(dataTestId('perps-order-entry-page'), { timeoutMs: 20000 });
-    const order = await page.evaluate(`(async () => {
+    let order;
+    try {
+      order = await page.evaluate(`(async () => {
       const request = globalThis.stateHooks?.submitRequestToBackground;
       if (typeof request !== 'function') throw new Error('stateHooks.submitRequestToBackground is unavailable; cannot place live Perps order.');
-      const priceText = document.querySelector(${JSON.stringify(dataTestId('perps-order-entry-price'))})?.innerText || document.body?.innerText || '';
-      const parsedPrice = Number(String(priceText).replace(/,/g, '').match(/[0-9]+(?:[.][0-9]+)?/)?.[0] || '0');
-      const currentPrice = Number(${JSON.stringify(input.node?.current_price ?? null)}) || parsedPrice;
+      const currentPrice = Number(${JSON.stringify(resolvedPrice)});
       if (!Number.isFinite(currentPrice) || currentPrice <= 0) throw new Error('Unable to determine current Perps price for order placement.');
       const usdAmount = ${JSON.stringify(amount)};
       const leverage = ${JSON.stringify(leverage)};
@@ -375,9 +398,15 @@ export async function placeOrder(input) {
         maxSlippageBps: ${JSON.stringify(Number(input.node?.max_slippage_bps ?? input.node?.maxSlippageBps ?? 300))},
       };
       const result = await request('perpsPlaceOrder', [orderParams]);
-      if (!result || result.success !== true) throw new Error(result?.error || 'perpsPlaceOrder failed.');
+      if (!result || result.success !== true) {
+        throw new Error(result?.error || 'perpsPlaceOrder failed.');
+      }
       return { result, orderParams };
     })()`, { awaitPromise: true });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`${message} (resolvedPrice=${resolvedPrice})`);
+    }
     await waitForPositionPresent(page, symbol, Number(input.node?.timeout_ms ?? 30000));
     return { action: input.action, market: symbol, side, amount, leverage, submitted: true, order, proofPath: 'background-perpsPlaceOrder' };
   });

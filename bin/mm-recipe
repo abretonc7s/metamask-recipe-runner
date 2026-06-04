@@ -1,0 +1,332 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  cat >&2 <<'EOF'
+Usage:
+  mm-recipe                         interactive menu
+  mm-recipe ios                     start/reuse Metro, launch iOS dev client
+  mm-recipe android                 start/reuse Metro, launch Android dev client
+  mm-recipe setup:ios               ios + setup wallet fixture
+  mm-recipe setup:android           android + setup wallet fixture
+  mm-recipe refresh                 start/reuse Metro, relaunch detected dev client
+  mm-recipe status                  app route/account status
+  mm-recipe route                   current route
+  mm-recipe navigate <Route> [json] navigate by React Navigation route
+  mm-recipe unlock [password]       unlock with fixture password if omitted
+  mm-recipe setup-wallet [fixture]  apply wallet fixture
+  mm-recipe accounts                list accounts
+  mm-recipe select-account <addr>   switch account
+  mm-recipe screenshot [path]       simulator/device screenshot
+  mm-recipe stop                    stop this slot's Metro
+  mm-recipe actions [--json]
+  mm-recipe doctor [--json]
+  mm-recipe run <recipe.json> [args] run recipe with detected slot env
+  mm-recipe <recipe.json> [args]    shortcut for run
+
+Detects Mobile root, .js.env, WATCHER_PORT, IOS_SIMULATOR/ANDROID_DEVICE.
+EOF
+}
+
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+runner="$script_dir/metamask-recipe"
+runner_root="$(cd "$script_dir/.." && pwd -P)"
+bridge="$runner_root/live-adapters/mobile/bridge-runtime/cdp-bridge.cjs"
+setup_wallet_script="$runner_root/live-adapters/mobile/bridge-runtime/setup-wallet.sh"
+
+find_mobile_root() {
+  local dir="$(pwd -P)"
+  while [ "$dir" != "/" ]; do
+    if [ -f "$dir/package.json" ] && { grep -q 'metamask-mobile' "$dir/package.json" 2>/dev/null || [[ "$(basename "$dir")" == metamask-mobile* ]]; }; then
+      printf '%s\n' "$dir"
+      return 0
+    fi
+    dir="$(dirname "$dir")"
+  done
+  return 1
+}
+
+load_env_file() {
+  local file="$1"
+  [ -f "$file" ] || return 0
+  while IFS= read -r line || [ -n "$line" ]; do
+    line="${line#export }"
+    case "$line" in
+      WATCHER_PORT=*|CDP_PORT=*|IOS_SIMULATOR=*|SIM_UDID=*|ANDROID_DEVICE=*|ADB_SERIAL=*|ANDROID_SERIAL=*)
+        key="${line%%=*}"
+        val="${line#*=}"
+        val="${val%%#*}"
+        val="$(printf '%s' "$val" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e 's/^"//' -e 's/"$//' -e "s/^'//" -e "s/'$//")"
+        [ -n "${!key:-}" ] || export "$key=$val"
+        ;;
+    esac
+  done < "$file"
+}
+
+infer_slot_number() {
+  local root="$1" base
+  base="$(basename "$root")"
+  [[ "$base" =~ -([0-9]+)$ ]] && printf '%s\n' "${BASH_REMATCH[1]}"
+}
+
+init_context() {
+  root="$(find_mobile_root)" || { echo "mm-recipe: run from a metamask-mobile checkout" >&2; exit 2; }
+  load_env_file "$root/.js.env"
+  load_env_file "$root/.env"
+  load_env_file "$root/.env.local"
+  slot="$(infer_slot_number "$root" || true)"
+  if [ -n "$slot" ]; then
+    [ -n "${WATCHER_PORT:-}" ] || export WATCHER_PORT="806$slot"
+    [ -n "${IOS_SIMULATOR:-}" ] || export IOS_SIMULATOR="mm-$slot"
+  fi
+  [ -n "${CDP_PORT:-}" ] || export CDP_PORT="${WATCHER_PORT:-}"
+  mkdir -p "$root/.agent" "$root/temp/recipe-artifacts"
+}
+
+
+pretty_json() {
+  node -e '
+let d="";
+process.stdin.on("data", c => d += c).on("end", () => {
+  const color = process.env.RECIPE_COLOR === "1";
+  const c = (code, s) => color ? `\x1b[${code}m${s}\x1b[0m` : s;
+  try {
+    const v = JSON.parse(d);
+    if (v.decision) {
+      console.log(`${c("1;33", "Decision")}: ${c("1;32", v.decision)}${v.reasonCode ? ` ${c("2", "—")} ${c("0;37", v.reasonCode)}` : ""}`);
+      if (Array.isArray(v.reasons)) for (const r of v.reasons) console.log(`  ${c("2", "-")} ${r}`);
+      return;
+    }
+    if (v.adapter && Array.isArray(v.actions) && v.actions.every(a => a && a.name)) {
+      console.log(`${c("1;36", "Actions")} ${c("2", `(${v.adapter})`)}:`);
+      for (const a of v.actions) {
+        console.log(`  ${c("1;32", a.name)}${a.description ? ` ${c("2", "—")} ${c("0;37", a.description)}` : ""}`);
+      }
+      return;
+    }
+    if (v.status && v.adapter) {
+      const status = String(v.status).toUpperCase();
+      const code = status === "PASS" || status === "OK" ? "1;32" : status === "FAIL" || status === "ERROR" ? "1;31" : "1;33";
+      console.log(`${c(code, status)} ${c("1;36", v.adapter)}${v.compatibilityMode ? ` ${c("2", "—")} ${v.compatibilityMode}` : ""}`);
+      return;
+    }
+    if (v.account || v.route || v.deviceName) {
+      console.log(`${c("1;36", "Device")}: ${v.deviceName || "?"}${v.platform ? ` ${c("2", `(${v.platform})`)}` : ""}`);
+      console.log(`${c("1;36", "Route")}: ${v.route && v.route.name ? v.route.name : JSON.stringify(v.route || null)}`);
+      if (v.account) console.log(`${c("1;36", "Account")}: ${v.account.name || "?"} ${c("2", v.account.address || "")}`);
+      return;
+    }
+    console.log(JSON.stringify(v, null, 2));
+  } catch {
+    process.stdout.write(d);
+  }
+})'
+}
+
+json_requested() {
+  for arg in "$@"; do [ "$arg" = "--json" ] && return 0; done
+  return 1
+}
+
+color_requested() {
+  [ "${RECIPE_NO_COLOR:-}" != "1" ] && { [ "${RECIPE_COLOR:-}" = "1" ] || [ "${FORCE_COLOR:-}" = "1" ] || [ -t 1 ]; }
+}
+
+pipe_pretty() {
+  if color_requested; then (export RECIPE_COLOR=1; pretty_json); else pretty_json; fi
+}
+
+run_pretty() {
+  if json_requested "$@"; then "$@"; else "$@" | pipe_pretty; fi
+}
+
+run_json_pretty() {
+  if json_requested "$@"; then "$@"; else "$@" --json | pipe_pretty; fi
+}
+log() { printf 'mm-recipe: %s\n' "$*" >&2; }
+
+metro_ready() {
+  curl -sf --max-time 2 "http://localhost:${WATCHER_PORT:-8081}/status" 2>/dev/null | grep -q 'packager-status:running'
+}
+
+start_metro() {
+  init_context
+  if metro_ready; then
+    log "Metro already running on port ${WATCHER_PORT}"
+    return 0
+  fi
+  log "Starting Metro on port ${WATCHER_PORT}"
+  (
+    cd "$root"
+    : > .agent/metro.log
+    nohup env WATCHER_PORT="$WATCHER_PORT" yarn expo start --port "$WATCHER_PORT" > .agent/metro.log 2>&1 &
+    echo $! > .agent/metro.pid
+  )
+  for _ in $(seq 1 90); do
+    metro_ready && { log "Metro ready: http://localhost:${WATCHER_PORT}/status"; return 0; }
+    sleep 1
+  done
+  tail -80 "$root/.agent/metro.log" >&2 || true
+  echo "mm-recipe: Metro did not become ready on port ${WATCHER_PORT}" >&2
+  return 1
+}
+
+sim_target() { printf '%s\n' "${SIM_UDID:-${IOS_SIMULATOR:-booted}}"; }
+
+launch_ios() {
+  start_metro
+  local target url encoded bundle_id
+  target="$(sim_target)"
+  bundle_id="${IOS_BUNDLE_ID:-io.metamask.MetaMask}"
+  xcrun simctl spawn "$target" defaults write "$bundle_id" EXDevMenuIsOnboardingFinished -bool YES 2>/dev/null || true
+  encoded="$(python3 - <<PY
+import urllib.parse
+print(urllib.parse.quote('http://localhost:${WATCHER_PORT}?disableOnboarding=1', safe=''))
+PY
+)"
+  url="expo-metamask://expo-development-client/?url=${encoded}"
+  log "Launching iOS dev client on ${target}"
+  xcrun simctl openurl "$target" "$url"
+}
+
+launch_android() {
+  start_metro
+  local serial_args=() package_id encoded url
+  package_id="${ANDROID_PACKAGE_ID:-io.metamask}"
+  if [ -n "${ADB_SERIAL:-${ANDROID_SERIAL:-${ANDROID_DEVICE:-}}}" ]; then
+    serial_args=(-s "${ADB_SERIAL:-${ANDROID_SERIAL:-${ANDROID_DEVICE}}}")
+  fi
+  adb "${serial_args[@]}" reverse "tcp:${WATCHER_PORT}" "tcp:${WATCHER_PORT}" >/dev/null 2>&1 || true
+  encoded="$(python3 - <<PY
+import urllib.parse
+print(urllib.parse.quote('http://localhost:${WATCHER_PORT}?disableOnboarding=1', safe=''))
+PY
+)"
+  url="expo-metamask://expo-development-client/?url=${encoded}"
+  log "Launching Android dev client"
+  adb "${serial_args[@]}" shell am start -a android.intent.action.VIEW -d "$url" >/dev/null
+}
+
+bridge_cmd() {
+  init_context
+  (cd "$root" && APP_ROOT="$root" node "$bridge" "$@")
+}
+
+fixture_password() {
+  init_context
+  node - "$root" <<'NODE'
+const fs = require('fs');
+const path = require('path');
+const root = process.argv[2];
+for (const rel of ['.agent/wallet-fixture.json', 'temp/runtime/wallet-fixture.json']) {
+  try {
+    const data = JSON.parse(fs.readFileSync(path.join(root, rel), 'utf8'));
+    if (data.password) { process.stdout.write(String(data.password)); process.exit(0); }
+  } catch {}
+}
+process.exit(1);
+NODE
+}
+
+setup_wallet() {
+  init_context
+  local fixture="${1:-.agent/wallet-fixture.json}"
+  (cd "$root" && APP_ROOT="$root" "$setup_wallet_script" --fixture "$fixture")
+}
+
+screenshot() {
+  init_context
+  local out="${1:-temp/recipe-artifacts/screenshot-$(date -u +%Y%m%dT%H%M%SZ).png}"
+  mkdir -p "$root/$(dirname "$out")"
+  if [ -n "${ANDROID_DEVICE:-${ADB_SERIAL:-${ANDROID_SERIAL:-}}}" ]; then
+    local serial_args=()
+    [ -n "${ADB_SERIAL:-${ANDROID_SERIAL:-${ANDROID_DEVICE:-}}}" ] && serial_args=(-s "${ADB_SERIAL:-${ANDROID_SERIAL:-${ANDROID_DEVICE}}}")
+    adb "${serial_args[@]}" exec-out screencap -p > "$root/$out"
+  else
+    xcrun simctl io "$(sim_target)" screenshot "$root/$out" >/dev/null
+  fi
+  log "screenshot: $root/$out"
+}
+
+refresh_mobile() {
+  if [ -n "${ANDROID_DEVICE:-${ADB_SERIAL:-${ANDROID_SERIAL:-}}}" ]; then
+    launch_android
+  else
+    launch_ios
+  fi
+}
+
+stop_metro() {
+  init_context
+  local pids=""
+  [ -f "$root/.agent/metro.pid" ] && pids="$(cat "$root/.agent/metro.pid" 2>/dev/null || true)"
+  pids="$pids $(lsof -nP -iTCP:${WATCHER_PORT:-8081} -sTCP:LISTEN -t 2>/dev/null | tr '\n' ' ')"
+  if [ -n "$(printf '%s' "$pids" | tr -d ' ')" ]; then
+    log "Stopping Metro on port ${WATCHER_PORT}: $pids"
+    kill $pids 2>/dev/null || true
+    sleep 1
+    kill -9 $pids 2>/dev/null || true
+  else
+    log "No Metro listener on port ${WATCHER_PORT:-8081}"
+  fi
+  rm -f "$root/.agent/metro.pid"
+}
+
+run_recipe() {
+  init_context
+  local recipe="$1"; shift
+  [ -f "$recipe" ] || { echo "mm-recipe: recipe not found: $recipe" >&2; exit 2; }
+  local out="$root/temp/recipe-artifacts/$(basename "$recipe" .json)-$(date -u +%Y%m%dT%H%M%SZ)"
+  log "root=$root port=${WATCHER_PORT:-?} sim=${IOS_SIMULATOR:-${ANDROID_DEVICE:-${ADB_SERIAL:-?}}} out=$out"
+  exec "$runner" run "$recipe" --adapter mobile --project-root "$root" --artifacts-dir "$out" "$@"
+}
+
+interactive() {
+  init_context
+  echo "mm-recipe (${root}, port=${WATCHER_PORT:-?}, sim=${IOS_SIMULATOR:-${ANDROID_DEVICE:-${ADB_SERIAL:-?}}})"
+  PS3='choose> '
+  select choice in refresh ios android status setup-wallet unlock accounts screenshot doctor actions stop quit; do
+    case "$choice" in
+      refresh) refresh_mobile ;;
+      ios) launch_ios ;;
+      android) launch_android ;;
+      status) bridge_cmd status | pipe_pretty ;;
+      setup-wallet) setup_wallet ;;
+      unlock) bridge_cmd unlock "$(fixture_password)" ;;
+      accounts) bridge_cmd list-accounts | pipe_pretty ;;
+      screenshot) screenshot ;;
+      doctor) run_json_pretty "$runner" doctor --adapter mobile --target "$root" ;;
+      actions) run_json_pretty "$runner" actions --adapter mobile ;;
+      stop) stop_metro ;;
+      quit|'') break ;;
+    esac
+    echo
+  done
+}
+
+cmd="${1:-interactive}"
+[ "$cmd" = "interactive" ] || shift || true
+case "$cmd" in
+  -h|--help) usage; exit 0 ;;
+  interactive) interactive ;;
+  ios|start) launch_ios ;;
+  android) launch_android ;;
+  setup:ios) launch_ios; setup_wallet ;;
+  setup:android) launch_android; setup_wallet ;;
+  refresh|reload|relaunch) refresh_mobile ;;
+  status) bridge_cmd status | pipe_pretty ;;
+  route|get-route) bridge_cmd get-route | pipe_pretty ;;
+  navigate) bridge_cmd navigate "$@" ;;
+  back|go-back) bridge_cmd go-back ;;
+  unlock) bridge_cmd unlock "${1:-$(fixture_password)}" ;;
+  setup-wallet|wallet-setup) setup_wallet "${1:-.agent/wallet-fixture.json}" ;;
+  accounts|list-accounts) bridge_cmd list-accounts | pipe_pretty ;;
+  select-account|switch-account) bridge_cmd switch-account "${1:?address required}" ;;
+  screenshot) screenshot "${1:-}" ;;
+  stop) stop_metro ;;
+  actions) init_context; run_json_pretty "$runner" actions --adapter mobile "$@" ;;
+  doctor) init_context; run_json_pretty "$runner" doctor --adapter mobile --target "$root" "$@" ;;
+  run) recipe="${1:-}"; [ -n "$recipe" ] || { usage; exit 2; }; shift; run_recipe "$recipe" "$@" ;;
+  *.json) run_recipe "$cmd" "$@" ;;
+  *) echo "mm-recipe: unknown command or missing recipe: $cmd" >&2; usage; exit 2 ;;
+esac

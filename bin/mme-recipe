@@ -1,0 +1,232 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  cat >&2 <<'EOF'
+Usage:
+  mme-recipe                         interactive menu
+  mme-recipe status                  runtime-health (CDP/live)
+  mme-recipe decision                runtime-decision (what next?)
+  mme-recipe ready                   ensure one healthy extension home tab
+  mme-recipe reopen                  reopen/reload browser from temp/runtime
+  mme-recipe refresh                 incremental refresh-build then ready
+  mme-recipe rebuild                 alias for refresh
+  mme-recipe sidepanel [cycle|open]  use temp/runtime/sidepanel-toggle.sh
+  mme-recipe actions [--json]
+  mme-recipe doctor [--json]
+  mme-recipe run <recipe.json> [args] run recipe with detected CDP/env
+  mme-recipe <recipe.json> [args]    shortcut for run
+
+Detects Extension root, temp/runtime/agentic-runtime.*, CDP_PORT, WATCHER_PORT.
+EOF
+}
+
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+runner="$script_dir/metamask-recipe"
+
+find_extension_root() {
+  local dir="$(pwd -P)"
+  while [ "$dir" != "/" ]; do
+    if [ -f "$dir/package.json" ] && { grep -q 'metamask-extension' "$dir/package.json" 2>/dev/null || [[ "$(basename "$dir")" == metamask-extension* ]]; }; then
+      printf '%s\n' "$dir"
+      return 0
+    fi
+    dir="$(dirname "$dir")"
+  done
+  return 1
+}
+
+json_field() {
+  local file="$1" field="$2"
+  [ -f "$file" ] || return 1
+  node - "$file" "$field" <<'NODE'
+const fs = require('fs');
+const [file, field] = process.argv.slice(-2);
+try {
+  const data = JSON.parse(fs.readFileSync(file, 'utf8'));
+  const value = field.split('.').reduce((node, key) => node?.[key], data);
+  if (value !== undefined && value !== null && value !== '') process.stdout.write(String(value));
+} catch { process.exit(1); }
+NODE
+}
+
+load_env_file() {
+  local file="$1"
+  [ -f "$file" ] || return 0
+  while IFS= read -r line || [ -n "$line" ]; do
+    line="${line#export }"
+    case "$line" in
+      CDP_PORT=*|RECIPE_CDP_PORT=*|WATCHER_PORT=*|RECIPE_WATCHER_PORT=*)
+        key="${line%%=*}"
+        val="${line#*=}"
+        val="${val%%#*}"
+        val="$(printf '%s' "$val" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e 's/^"//' -e 's/"$//' -e "s/^'//" -e "s/'$//")"
+        [ -n "${!key:-}" ] || export "$key=$val"
+        ;;
+    esac
+  done < "$file"
+}
+
+infer_slot_number() {
+  local root="$1" base
+  base="$(basename "$root")"
+  [[ "$base" =~ -([0-9]+)$ ]] && printf '%s\n' "${BASH_REMATCH[1]}"
+}
+
+init_context() {
+  root="$(find_extension_root)" || { echo "mme-recipe: run from a metamask-extension checkout" >&2; exit 2; }
+  runtime_json="$root/temp/runtime/agentic-runtime.json"
+  load_env_file "$root/temp/runtime/agentic-runtime.env"
+  load_env_file "$root/.js.env"
+  load_env_file "$root/.env"
+  load_env_file "$root/.env.local"
+  [ -n "${CDP_PORT:-}" ] || CDP_PORT="$(json_field "$runtime_json" cdpPort || true)"
+  [ -n "${WATCHER_PORT:-}" ] || WATCHER_PORT="$(json_field "$runtime_json" watcherPort || json_field "$runtime_json" devServerPort || true)"
+  slot="$(infer_slot_number "$root" || true)"
+  if [ -n "$slot" ]; then
+    [ -n "${CDP_PORT:-}" ] || CDP_PORT="666$slot"
+    [ -n "${WATCHER_PORT:-}" ] || WATCHER_PORT="901$slot"
+  fi
+  export CDP_PORT RECIPE_CDP_PORT="${CDP_PORT:-}" WATCHER_PORT RECIPE_WATCHER_PORT="${WATCHER_PORT:-}"
+  mkdir -p "$root/temp/recipe-artifacts"
+}
+
+
+pretty_json() {
+  node -e '
+let d="";
+process.stdin.on("data", c => d += c).on("end", () => {
+  const color = process.env.RECIPE_COLOR === "1";
+  const c = (code, s) => color ? `\x1b[${code}m${s}\x1b[0m` : s;
+  try {
+    const v = JSON.parse(d);
+    if (v.decision) {
+      console.log(`${c("1;33", "Decision")}: ${c("1;32", v.decision)}${v.reasonCode ? ` ${c("2", "—")} ${c("0;37", v.reasonCode)}` : ""}`);
+      if (Array.isArray(v.reasons)) for (const r of v.reasons) console.log(`  ${c("2", "-")} ${r}`);
+      return;
+    }
+    if (v.adapter && Array.isArray(v.actions) && v.actions.every(a => a && a.name)) {
+      console.log(`${c("1;36", "Actions")} ${c("2", `(${v.adapter})`)}:`);
+      for (const a of v.actions) {
+        console.log(`  ${c("1;32", a.name)}${a.description ? ` ${c("2", "—")} ${c("0;37", a.description)}` : ""}`);
+      }
+      return;
+    }
+    if (v.status && v.adapter) {
+      const status = String(v.status).toUpperCase();
+      const code = status === "PASS" || status === "OK" ? "1;32" : status === "FAIL" || status === "ERROR" ? "1;31" : "1;33";
+      console.log(`${c(code, status)} ${c("1;36", v.adapter)}${v.compatibilityMode ? ` ${c("2", "—")} ${v.compatibilityMode}` : ""}`);
+      return;
+    }
+    if (v.account || v.route || v.deviceName) {
+      console.log(`${c("1;36", "Device")}: ${v.deviceName || "?"}${v.platform ? ` ${c("2", `(${v.platform})`)}` : ""}`);
+      console.log(`${c("1;36", "Route")}: ${v.route && v.route.name ? v.route.name : JSON.stringify(v.route || null)}`);
+      if (v.account) console.log(`${c("1;36", "Account")}: ${v.account.name || "?"} ${c("2", v.account.address || "")}`);
+      return;
+    }
+    console.log(JSON.stringify(v, null, 2));
+  } catch {
+    process.stdout.write(d);
+  }
+})'
+}
+
+json_requested() {
+  for arg in "$@"; do [ "$arg" = "--json" ] && return 0; done
+  return 1
+}
+
+color_requested() {
+  [ "${RECIPE_NO_COLOR:-}" != "1" ] && { [ "${RECIPE_COLOR:-}" = "1" ] || [ "${FORCE_COLOR:-}" = "1" ] || [ -t 1 ]; }
+}
+
+pipe_pretty() {
+  if color_requested; then (export RECIPE_COLOR=1; pretty_json); else pretty_json; fi
+}
+
+run_pretty() {
+  if json_requested "$@"; then "$@"; else "$@" | pipe_pretty; fi
+}
+
+run_json_pretty() {
+  if json_requested "$@"; then "$@"; else "$@" --json | pipe_pretty; fi
+}
+log() { printf 'mme-recipe: %s\n' "$*" >&2; }
+need_cdp() { [ -n "${CDP_PORT:-}" ] || { echo "mme-recipe: CDP_PORT not found" >&2; exit 2; }; }
+
+status() { init_context; need_cdp; run_json_pretty "$runner" runtime-health --adapter extension --target "$root" --cdp-port "$CDP_PORT" "$@"; }
+decision() { init_context; run_json_pretty "$runner" runtime-decision --adapter extension --target "$root" ${CDP_PORT:+--cdp-port "$CDP_PORT"} ${WATCHER_PORT:+--watch-log "$root/temp/runtime/webpack.log"} "$@"; }
+ready() { init_context; need_cdp; exec "$runner" ensure-ready --adapter extension --target "$root" --cdp-port "$CDP_PORT" "$@"; }
+
+do_reopen() {
+  init_context; need_cdp
+  local s="$root/temp/runtime/reopen-browser.sh"
+  [ -x "$s" ] || [ -f "$s" ] || { echo "mme-recipe: missing $s" >&2; exit 1; }
+  log "reopen browser cdp=$CDP_PORT watcher=${WATCHER_PORT:-?}"
+  bash "$s" --repo "$root" --cdp-port "$CDP_PORT" ${WATCHER_PORT:+--watcher-port "$WATCHER_PORT"} "$@"
+}
+
+do_refresh() {
+  init_context
+  local s="$root/temp/runtime/refresh-build.sh"
+  [ -x "$s" ] || [ -f "$s" ] || { echo "mme-recipe: missing $s" >&2; exit 1; }
+  log "incremental refresh watcher=${WATCHER_PORT:-?}"
+  bash "$s" --repo "$root" ${WATCHER_PORT:+--watcher-port "$WATCHER_PORT"} "$@"
+  if [ -n "${CDP_PORT:-}" ]; then
+    "$runner" ensure-ready --adapter extension --target "$root" --cdp-port "$CDP_PORT" --json || true
+  fi
+}
+
+sidepanel() {
+  init_context; need_cdp
+  local s="$root/temp/runtime/sidepanel-toggle.sh"
+  [ -x "$s" ] || [ -f "$s" ] || { echo "mme-recipe: missing $s" >&2; exit 1; }
+  bash "$s" "${1:-cycle}" --cdp-port "$CDP_PORT"
+}
+
+run_recipe() {
+  init_context; need_cdp
+  local recipe="$1"; shift
+  [ -f "$recipe" ] || { echo "mme-recipe: recipe not found: $recipe" >&2; exit 2; }
+  local out="$root/temp/recipe-artifacts/$(basename "$recipe" .json)-$(date -u +%Y%m%dT%H%M%SZ)"
+  log "root=$root cdp=$CDP_PORT watcher=${WATCHER_PORT:-?} out=$out"
+  exec "$runner" run "$recipe" --adapter extension --project-root "$root" --cdp-port "$CDP_PORT" --artifacts-dir "$out" "$@"
+}
+
+interactive() {
+  init_context
+  echo "mme-recipe (${root}, cdp=${CDP_PORT:-?}, watcher=${WATCHER_PORT:-?})"
+  PS3='choose> '
+  select choice in status decision ready reopen refresh sidepanel actions doctor quit; do
+    case "$choice" in
+      status) run_json_pretty "$runner" runtime-health --adapter extension --target "$root" --cdp-port "$CDP_PORT" ;;
+      decision) run_json_pretty "$runner" runtime-decision --adapter extension --target "$root" ${CDP_PORT:+--cdp-port "$CDP_PORT"} ;;
+      ready) "$runner" ensure-ready --adapter extension --target "$root" --cdp-port "$CDP_PORT" ;;
+      reopen) do_reopen ;;
+      refresh) do_refresh ;;
+      sidepanel) sidepanel cycle ;;
+      actions) run_json_pretty "$runner" actions --adapter extension ;;
+      doctor) run_json_pretty "$runner" doctor --adapter extension --target "$root" ;;
+      quit|'') break ;;
+    esac
+    echo
+  done
+}
+
+cmd="${1:-interactive}"
+[ "$cmd" = "interactive" ] || shift || true
+case "$cmd" in
+  -h|--help) usage; exit 0 ;;
+  interactive) interactive ;;
+  status|health) status "$@" ;;
+  decision|decide) decision "$@" ;;
+  ready|ensure-ready) ready "$@" ;;
+  reopen|reload|browser) do_reopen "$@" ;;
+  refresh|rebuild|build) do_refresh "$@" ;;
+  sidepanel) sidepanel "$@" ;;
+  actions) init_context; run_json_pretty "$runner" actions --adapter extension "$@" ;;
+  doctor) init_context; run_json_pretty "$runner" doctor --adapter extension --target "$root" "$@" ;;
+  run) recipe="${1:-}"; [ -n "$recipe" ] || { usage; exit 2; }; shift; run_recipe "$recipe" "$@" ;;
+  *.json) run_recipe "$cmd" "$@" ;;
+  *) echo "mme-recipe: unknown command or missing recipe: $cmd" >&2; usage; exit 2 ;;
+esac
