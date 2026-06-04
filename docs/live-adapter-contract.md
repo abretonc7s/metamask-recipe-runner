@@ -151,7 +151,7 @@ Read-only position checks use `stateHooks.submitRequestToBackground('perpsGetPos
 
 ## Built-in Mobile live adapters
 
-The first Mobile adapter set is bundled under `live-adapters/mobile/` and delegates to the product-local React Native CDP bridge at `scripts/perps/agentic/cdp-bridge.js`. This intentionally uses only the bridge/helper layer from Mobile; the v1 runner remains the single recipe graph executor and Farmslot recipe protocol v1 remains the single recipe schema.
+The Mobile adapter is bundled under `live-adapters/mobile/`. Its CDP bridge, wallet setup, target discovery, and screenshot helpers run from the runner runtime; the Mobile checkout must not own harness control scripts. The app still needs a development-only in-app bridge/HUD overlay when a historical checkout does not expose the required `globalThis.__AGENTIC__` hooks.
 
 Runtime input:
 

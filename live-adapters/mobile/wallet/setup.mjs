@@ -1,13 +1,13 @@
 import { readFile } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { bridgeCommand, bridgeEnv, runAdapter } from '../platform/bridge.mjs';
 
 async function fixtureProfile(projectRoot) {
   const candidates = [
     path.join(projectRoot, '.agent/wallet-fixture.json'),
     path.join(projectRoot, 'temp/runtime/wallet-fixture.json'),
-    path.join(projectRoot, 'scripts/perps/agentic/wallet-fixture.json'),
   ];
   for (const candidate of candidates) {
     try {
@@ -105,11 +105,11 @@ function hasSelectedAccount(status, input) {
   return Boolean(selectedStatus(status, input)?.account);
 }
 
-function setupWalletScript(input) {
-  return path.join(
-    input.context.projectRoot,
-    'scripts/perps/agentic/setup-wallet.sh',
-  );
+function setupWalletScript() {
+  if (process.env.METAMASK_RECIPE_MOBILE_SETUP_WALLET_SCRIPT) {
+    return process.env.METAMASK_RECIPE_MOBILE_SETUP_WALLET_SCRIPT;
+  }
+  return fileURLToPath(new URL('../bridge-runtime/setup-wallet.sh', import.meta.url));
 }
 
 function runSetupWallet(input, fixture) {
@@ -119,10 +119,10 @@ function runSetupWallet(input, fixture) {
     );
     const child = spawn(
       'bash',
-      [setupWalletScript(input), '--fixture', fixture.absolutePath],
+      [setupWalletScript(), '--fixture', fixture.absolutePath],
       {
         cwd: input.context.projectRoot,
-        env: { ...bridgeEnv(input), CDP_TIMEOUT: String(timeoutMs) },
+        env: { ...bridgeEnv(input), CDP_TIMEOUT: String(timeoutMs), APP_ROOT: input.context.projectRoot },
         stdio: ['ignore', 'pipe', 'pipe'],
       },
     );

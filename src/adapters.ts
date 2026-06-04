@@ -1,5 +1,4 @@
 import http from 'node:http';
-import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { compatibilityMode, fixtureSummary, repoShape } from './doctor.ts';
 import { runLiveAdapterScript } from './live-adapter-contract.ts';
@@ -272,9 +271,8 @@ function mobileProbeOutput(status: unknown, input: MetaMaskUiActionInput, projec
   };
 }
 
-function mobileBridgePath(projectRoot: string): string {
-  const injected = '.agent/recipe-harness/mobile/cdp-bridge.js';
-  return existsSync(path.join(projectRoot, injected)) ? injected : 'scripts/perps/agentic/cdp-bridge.js';
+function mobileBridgePath(_projectRoot: string): string {
+  return process.env.METAMASK_RECIPE_MOBILE_BRIDGE_SCRIPT || 'runner:live-adapters/mobile/bridge-runtime/cdp-bridge.cjs';
 }
 
 async function waitForMobileTarget(input: ReturnType<typeof uiInputFor>, payload: ActionNode) {

@@ -19,26 +19,22 @@ export function repoShape(target: string): Record<string, unknown> {
     extensionProject,
     mobileProject,
     agenticService: exists('app/core/AgenticService/AgenticService.ts'),
-    mobileProductHarness: exists('scripts/perps/agentic'),
-    mobileBridgeScript: exists('scripts/perps/agentic/cdp-bridge.js'),
+    mobileProductHarness: false,
+    mobileBridgeScript: true,
     extensionRuntime: exists('temp/agentic/recipes') || exists('.agent/recipe-harness/extension'),
     injectedHarness: exists('.agent/recipe-harness/mobile') || exists('.agent/recipe-harness/extension'),
     walletFixture:
       exists('.agent/wallet-fixture.json') ||
-      exists('temp/runtime/wallet-fixture.json') ||
-      exists('scripts/perps/agentic/wallet-fixture.json'),
+      exists('temp/runtime/wallet-fixture.json'),
   };
 }
 
 export function compatibilityMode(adapter: MetaMaskRecipeAdapter, target: string) {
   const shape = repoShape(target);
   if (adapter === 'mobile') {
-    if (shape.injectedHarness && shape.agenticService && shape.mobileBridgeScript) {
-      return 'injected bridge present';
-    }
-    if (shape.agenticService && shape.mobileBridgeScript) return 'bridge present';
-    if (shape.mobileProductHarness && shape.mobileBridgeScript) return 'product-local harness present';
-    return 'unsupported/no bridge';
+    if (shape.injectedHarness && shape.agenticService) return 'runner bridge with injected app bridge';
+    if (shape.agenticService) return 'runner bridge with app bridge';
+    return 'runner bridge available; app bridge not installed';
   }
   if (!shape.extensionProject) return 'unsupported/no bridge';
   if (shape.extensionRuntime || shape.injectedHarness) return 'bridge present';
@@ -70,7 +66,6 @@ export function fixtureSummary(target: string): Record<string, unknown> {
   const candidates = [
     '.agent/wallet-fixture.json',
     'temp/runtime/wallet-fixture.json',
-    'scripts/perps/agentic/wallet-fixture.json',
   ];
   const rel = candidates.find((candidate) => fs.existsSync(path.join(target, candidate)));
   if (!rel) return { status: 'missing', path: null };
@@ -95,7 +90,7 @@ export function createDoctorReport(
 ): MetaMaskDoctorReport {
   const mode = compatibilityMode(adapter, target);
   const manifestErrors = Number(manifestValidation.summary?.errors ?? 0);
-  const status = manifestErrors > 0 || mode === 'unsupported/no bridge' ? 'fail' : 'pass';
+  const status = manifestErrors > 0 ? 'fail' : 'pass';
   const checks = [
     {
       id: 'manifest',

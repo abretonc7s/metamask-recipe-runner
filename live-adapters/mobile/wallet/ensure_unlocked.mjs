@@ -6,7 +6,6 @@ async function fixturePassword(projectRoot) {
   const candidates = [
     path.join(projectRoot, '.agent/wallet-fixture.json'),
     path.join(projectRoot, 'temp/runtime/wallet-fixture.json'),
-    path.join(projectRoot, 'scripts/perps/agentic/wallet-fixture.json'),
   ];
   for (const candidate of candidates) {
     try {

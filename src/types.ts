@@ -25,6 +25,9 @@ export interface MetaMaskDoctorReport {
     | 'injected bridge present'
     | 'bridge injectable'
     | 'product-local harness present'
+    | 'runner bridge with injected app bridge'
+    | 'runner bridge with app bridge'
+    | 'runner bridge available; app bridge not installed'
     | 'unsupported/no bridge';
   runner: {
     name: '@metamask/recipe-runner';

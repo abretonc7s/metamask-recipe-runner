@@ -1,7 +1,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
-import { existsSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -24,9 +24,14 @@ export async function runAdapter(callback) {
 }
 
 function bridgeScript(input) {
-  const injected = path.join(input.context.projectRoot, '.agent/recipe-harness/mobile/cdp-bridge.js');
-  if (existsSync(injected)) return injected;
-  return path.join(input.context.projectRoot, 'scripts/perps/agentic/cdp-bridge.js');
+  if (process.env.METAMASK_RECIPE_MOBILE_BRIDGE_SCRIPT) {
+    return process.env.METAMASK_RECIPE_MOBILE_BRIDGE_SCRIPT;
+  }
+  return path.join(runtimeDir(), 'cdp-bridge.cjs');
+}
+
+function runtimeDir() {
+  return fileURLToPath(new URL('../bridge-runtime', import.meta.url));
 }
 
 export function bridgeEnv(input) {
@@ -64,7 +69,7 @@ export async function bridgeCommand(input, args) {
     const timeoutMs = Number(input.node?.bridge_timeout_ms ?? input.node?.cdp_timeout_ms ?? process.env.CDP_TIMEOUT ?? 30000);
     const child = spawn(process.execPath, [script, ...args], {
       cwd: input.context.projectRoot,
-      env: bridgeEnv(input),
+      env: { ...bridgeEnv(input), APP_ROOT: input.context.projectRoot },
       stdio: ['ignore', 'pipe', 'pipe'],
     });
     let stdout = '';
