@@ -45,5 +45,13 @@
     "AGENTS.md",
     "CLAUDE.md"
   ],
-  "packageManager": "yarn@4.5.3"
+  "packageManager": "yarn@4.5.3",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/abretonc7s/metamask-recipe-runner.git"
+  },
+  "bugs": {
+    "url": "https://github.com/abretonc7s/metamask-recipe-runner/issues"
+  },
+  "homepage": "https://github.com/abretonc7s/metamask-recipe-runner#readme"
 }
