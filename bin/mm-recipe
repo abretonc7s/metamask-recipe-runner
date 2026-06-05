@@ -329,6 +329,7 @@ case "$cmd" in
   setup:ios) launch_ios; setup_wallet ;;
   setup:android) launch_android; setup_wallet ;;
   refresh|reload|relaunch) refresh_mobile ;;
+  logs|tail) tail_logs ;;
   status) bridge_cmd status | pipe_pretty ;;
   route|get-route) bridge_cmd get-route | pipe_pretty ;;
   navigate) bridge_cmd navigate "$@" ;;
