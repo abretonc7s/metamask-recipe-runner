@@ -156,11 +156,12 @@ start_metro() {
     log "Metro already running on port ${WATCHER_PORT}"
     return 0
   fi
-  log "Starting Metro on port ${WATCHER_PORT}"
+  local metro_workers="${METRO_MAX_WORKERS:-2}"
+  log "Starting Metro on port ${WATCHER_PORT} (METRO_MAX_WORKERS=${metro_workers})"
   (
     cd "$root"
     : > .agent/metro.log
-    nohup env WATCHER_PORT="$WATCHER_PORT" yarn expo start --port "$WATCHER_PORT" > .agent/metro.log 2>&1 &
+    nohup env WATCHER_PORT="$WATCHER_PORT" METRO_MAX_WORKERS="$metro_workers" yarn expo start --port "$WATCHER_PORT" > .agent/metro.log 2>&1 &
     echo $! > .agent/metro.pid
   )
   for _ in $(seq 1 90); do
