@@ -175,10 +175,52 @@ start_metro() {
 
 sim_target() { printf '%s\n' "${SIM_UDID:-${IOS_SIMULATOR:-booted}}"; }
 
+sim_udid_for_target() {
+  local target="$1"
+  if [[ "$target" =~ ^[0-9A-Fa-f-]{36}$ ]]; then
+    printf '%s\n' "$target"
+    return 0
+  fi
+  xcrun simctl list devices available | sed -n "s/.*${target} (\([0-9A-Fa-f-]*\)) (.*/\1/p" | head -1
+}
+
+show_simulator() {
+  local target="$1" udid=""
+  if [ "$target" = "booted" ]; then
+    log "Opening Simulator UI"
+    open -a Simulator >/dev/null 2>&1 || true
+    osascript -e 'tell application "Simulator" to activate' >/dev/null 2>&1 || true
+    return 0
+  fi
+  udid="$(sim_udid_for_target "$target")"
+  if [ -n "$udid" ]; then
+    log "Opening Simulator UI for ${target}"
+    open -a Simulator --args -CurrentDeviceUDID "$udid" >/dev/null 2>&1 || true
+  else
+    log "Opening Simulator UI"
+    open -a Simulator >/dev/null 2>&1 || true
+  fi
+  osascript -e 'tell application "Simulator" to activate' >/dev/null 2>&1 || true
+}
+
+boot_simulator_if_needed() {
+  local target="$1" state=""
+  [ "$target" != "booted" ] || return 0
+  local line=""
+  line="$(xcrun simctl list devices available | grep -F "${target} (" | head -1 || true)"
+  case "$line" in *"(Booted)"*) state="Booted" ;; *"(Shutdown)"*) state="Shutdown" ;; esac
+  if [ "$state" = "Booted" ]; then return 0; fi
+  log "Booting iOS simulator ${target}${state:+ (${state})}"
+  xcrun simctl boot "$target" 2>/dev/null || true
+  xcrun simctl bootstatus "$target" -b >/dev/null
+}
+
 launch_ios() {
   start_metro
   local target url encoded bundle_id
   target="$(sim_target)"
+  boot_simulator_if_needed "$target"
+  show_simulator "$target"
   bundle_id="${IOS_BUNDLE_ID:-io.metamask.MetaMask}"
   xcrun simctl spawn "$target" defaults write "$bundle_id" EXDevMenuIsOnboardingFinished -bool YES 2>/dev/null || true
   encoded="$(python3 - <<PY
