@@ -10,6 +10,7 @@ Usage:
   mm-recipe setup:ios               ios + setup wallet fixture
   mm-recipe setup:android           android + setup wallet fixture
   mm-recipe refresh                 start/reuse Metro, relaunch detected dev client
+  mm-recipe logs                    tail Metro log
   mm-recipe status                  app route/account status
   mm-recipe route                   current route
   mm-recipe navigate <Route> [json] navigate by React Navigation route
@@ -163,7 +164,7 @@ start_metro() {
     echo $! > .agent/metro.pid
   )
   for _ in $(seq 1 90); do
-    metro_ready && { log "Metro ready: http://localhost:${WATCHER_PORT}/status"; return 0; }
+    metro_ready && { log "Metro ready: http://localhost:${WATCHER_PORT}/status"; log "Metro log: .agent/metro.log (tail with: recipe logs)"; return 0; }
     sleep 1
   done
   tail -80 "$root/.agent/metro.log" >&2 || true
@@ -187,6 +188,8 @@ PY
   url="expo-metamask://expo-development-client/?url=${encoded}"
   log "Launching iOS dev client on ${target}"
   xcrun simctl openurl "$target" "$url"
+  log "Next: recipe logs   # tail Metro"
+  log "Next: recipe status # app route/account once loaded"
 }
 
 launch_android() {
@@ -205,6 +208,8 @@ PY
   url="expo-metamask://expo-development-client/?url=${encoded}"
   log "Launching Android dev client"
   adb "${serial_args[@]}" shell am start -a android.intent.action.VIEW -d "$url" >/dev/null
+  log "Next: recipe logs   # tail Metro"
+  log "Next: recipe status # app route/account once loaded"
 }
 
 bridge_cmd() {
@@ -247,6 +252,14 @@ screenshot() {
     xcrun simctl io "$(sim_target)" screenshot "$root/$out" >/dev/null
   fi
   log "screenshot: $root/$out"
+}
+
+tail_logs() {
+  init_context
+  local log_file="$root/.agent/metro.log"
+  [ -f "$log_file" ] || { echo "mm-recipe: Metro log missing: .agent/metro.log. Start with: recipe ios|android" >&2; return 1; }
+  log "tailing .agent/metro.log (Ctrl-C to stop)"
+  tail -f "$log_file"
 }
 
 refresh_mobile() {
