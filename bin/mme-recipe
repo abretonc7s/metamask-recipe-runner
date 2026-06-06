@@ -5,7 +5,10 @@ usage() {
   cat >&2 <<'EOF'
 Usage:
   mme-recipe                         interactive menu
+  mme-recipe prepare                 install harness and optionally validate CDP health
+    --target <repo> --cdp-port <port> --runtime-dir <dir>
   mme-recipe status                  runtime-health (CDP/live)
+  mme-recipe runtime-status [--json] structured decision/health status
   mme-recipe decision                runtime-decision (what next?)
   mme-recipe ready                   ensure one healthy extension home tab
   mme-recipe watch                   start/reuse one webpack watcher for fast refresh
@@ -20,12 +23,14 @@ Usage:
   mme-recipe run <recipe.json> [args] run recipe with detected CDP/env
   mme-recipe <recipe.json> [args]    shortcut for run
 
-Detects Extension root, temp/recipe/runtime/agentic-runtime.*, CDP_PORT, WATCHER_PORT.
+Detects Extension root, recipe runtime context, CDP_PORT, WATCHER_PORT.
 EOF
 }
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 runner="$script_dir/metamask-recipe"
+runner_root="$(cd "$script_dir/.." && pwd -P)"
+install_script="$runner_root/scripts/inject-extension-harness.mjs"
 
 find_extension_root() {
   local dir="$(pwd -P)"
@@ -80,7 +85,9 @@ init_context() {
   root="$(find_extension_root)" || { echo "mme-recipe: run from a metamask-extension checkout" >&2; exit 2; }
   runtime_dir="${RECIPE_RUNTIME_DIR:-temp/recipe/runtime}"
   harness_root="${RECIPE_HARNESS_ROOT:-temp/recipe/harness}"
-  runtime_json="$root/$runtime_dir/agentic-runtime.json"
+  runtime_json="$root/$runtime_dir/recipe-runtime.json"
+  [ -f "$runtime_json" ] || runtime_json="$root/$runtime_dir/agentic-runtime.json"
+  load_env_file "$root/$runtime_dir/recipe-runtime.env"
   load_env_file "$root/$runtime_dir/agentic-runtime.env"
   load_env_file "$root/.js.env"
   load_env_file "$root/.env"
@@ -159,6 +166,35 @@ run_json_pretty() {
 log() { printf 'mme-recipe: %s\n' "$*" >&2; }
 need_cdp() { [ -n "${CDP_PORT:-}" ] || { echo "mme-recipe: CDP_PORT not found" >&2; exit 2; }; }
 
+prepare_extension() {
+  local target="" cdp_port="${CDP_PORT:-${RECIPE_CDP_PORT:-}}" runtime_dir="${RECIPE_RUNTIME_DIR:-temp/recipe/runtime}" validate=false
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --target) target="$2"; shift 2 ;;
+      --cdp-port) cdp_port="$2"; validate=true; shift 2 ;;
+      --runtime-dir) runtime_dir="$2"; shift 2 ;;
+      --validate) validate=true; shift ;;
+      -h|--help)
+        echo "Usage: mme-recipe prepare [--target <repo>] [--cdp-port <port>] [--runtime-dir <dir>] [--validate]"
+        return 0
+        ;;
+      *) echo "mme-recipe prepare: unknown arg: $1" >&2; return 2 ;;
+    esac
+  done
+  if [ -n "$target" ]; then
+    target="$(cd "$target" && pwd -P)"
+    (cd "$target" && RECIPE_RUNTIME_DIR="$runtime_dir" "$install_script" --target "$target")
+  else
+    init_context
+    target="$root"
+    RECIPE_RUNTIME_DIR="$runtime_dir" "$install_script" --target "$target"
+  fi
+  if $validate; then
+    [ -n "$cdp_port" ] || { echo "mme-recipe prepare: --validate requires --cdp-port or CDP_PORT" >&2; return 2; }
+    run_json_pretty "$runner" runtime-health --adapter extension --target "$target" --cdp-port "$cdp_port"
+  fi
+}
+
 harness_helper() {
   local field="$1" fallback="$2" rel script manifest
   manifest="$root/$harness_root/extension/manifest.json"
@@ -178,6 +214,86 @@ harness_helper() {
 status() { init_context; need_cdp; run_json_pretty "$runner" runtime-health --adapter extension --target "$root" --cdp-port "$CDP_PORT" "$@"; }
 decision() { init_context; run_json_pretty "$runner" runtime-decision --adapter extension --target "$root" ${CDP_PORT:+--cdp-port "$CDP_PORT"} ${WATCHER_PORT:+--watch-log "$root/$runtime_dir/webpack.log"} "$@"; }
 ready() { init_context; need_cdp; exec "$runner" ensure-ready --adapter extension --target "$root" --cdp-port "$CDP_PORT" "$@"; }
+
+runtime_status() {
+  local target="" cdp_port="" runtime_dir_arg=""
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --target) target="$2"; shift 2 ;;
+      --cdp-port) cdp_port="$2"; shift 2 ;;
+      --runtime-dir) runtime_dir_arg="$2"; shift 2 ;;
+      --json) shift ;;
+      -h|--help)
+        echo "Usage: mme-recipe runtime-status [--target <repo>] [--cdp-port <port>] [--runtime-dir <dir>] [--json]"
+        return 0
+        ;;
+      *) echo "mme-recipe runtime-status: unknown arg: $1" >&2; return 2 ;;
+    esac
+  done
+  [ -n "$target" ] && cd "$target"
+  [ -n "$runtime_dir_arg" ] && export RECIPE_RUNTIME_DIR="$runtime_dir_arg"
+  [ -n "$cdp_port" ] && export CDP_PORT="$cdp_port" RECIPE_CDP_PORT="$cdp_port"
+  init_context
+  local runtime_abs="$root/$runtime_dir"
+  local status_file="$runtime_abs/runtime-status.json"
+  mkdir -p "$runtime_abs"
+  local decision_json health_json health_exit=0
+  decision_json="$("$runner" runtime-decision --adapter extension --target "$root" ${CDP_PORT:+--cdp-port "$CDP_PORT"} ${WATCHER_PORT:+--watch-log "$root/$runtime_dir/webpack.log"} --json)"
+  if [ -n "${CDP_PORT:-}" ]; then
+    health_json="$("$runner" runtime-health --adapter extension --target "$root" --cdp-port "$CDP_PORT" --json 2>/dev/null)" || health_exit=$?
+  else
+    health_json=""
+  fi
+  node - "$root" "$runtime_dir" "${CDP_PORT:-}" "${WATCHER_PORT:-}" "$status_file" "$decision_json" "$health_json" "$health_exit" <<'NODE'
+const fs = require('fs');
+const path = require('path');
+const [target, runtimeDir, cdpPort, watcherPort, statusFile, decisionText, healthText, healthExit] = process.argv.slice(2);
+const parse = (label, text) => {
+  if (!text) return { value: null, error: null };
+  try {
+    return { value: JSON.parse(text), error: null };
+  } catch (error) {
+    return { value: null, error: `${label} JSON parse failed: ${error.message}` };
+  }
+};
+const decisionResult = parse('runtime-decision', decisionText);
+const healthResult = parse('runtime-health', healthText);
+const decision = decisionResult.value;
+const health = healthResult.value;
+const ready = decision?.decision === 'ready' && (!health || health.status === 'PASS');
+function fixtureStatus() {
+  const candidates = [
+    process.env.RECIPE_WALLET_FIXTURE,
+    path.join(target, runtimeDir, 'wallet-fixture.json'),
+    path.join(target, 'temp/runtime/wallet-fixture.json'),
+    cdpPort ? path.join(target, `temp/.recipe-validation-${cdpPort}/wallet-fixture.json`) : null,
+    path.join(target, 'temp/.agent-validation/wallet-fixture.json'),
+  ].filter(Boolean);
+  const fixturePath = candidates.find((candidate) => fs.existsSync(candidate)) || null;
+  return {
+    present: Boolean(fixturePath),
+    path: fixturePath,
+    candidates,
+  };
+}
+const status = {
+  schemaVersion: 1,
+  adapter: 'extension',
+  target,
+  runtimeDir,
+  updatedAt: new Date().toISOString(),
+  ready,
+  reason: ready ? 'ready' : decision?.reasonCode || health?.findings?.[0] || 'not-ready',
+  cdp: { port: cdpPort ? Number(cdpPort) : null, healthExit: Number(healthExit || 0), health },
+  watcher: { port: watcherPort ? Number(watcherPort) : null },
+  fixture: fixtureStatus(),
+  decision,
+  errors: [decisionResult.error, healthResult.error].filter(Boolean),
+};
+fs.writeFileSync(statusFile, `${JSON.stringify(status, null, 2)}\n`);
+console.log(JSON.stringify(status, null, 2));
+NODE
+}
 
 do_reopen() {
   init_context; need_cdp
@@ -372,9 +488,10 @@ interactive() {
   init_context
   echo "mme-recipe (${root}, cdp=${CDP_PORT:-?}, watcher=${WATCHER_PORT:-?})"
   PS3='choose> '
-  select choice in status decision ready reopen refresh sidepanel actions doctor quit; do
+  select choice in status runtime-status decision ready reopen refresh sidepanel actions doctor quit; do
     case "$choice" in
       status) run_json_pretty "$runner" runtime-health --adapter extension --target "$root" --cdp-port "$CDP_PORT" ;;
+      runtime-status) runtime_status | pipe_pretty ;;
       decision) run_json_pretty "$runner" runtime-decision --adapter extension --target "$root" ${CDP_PORT:+--cdp-port "$CDP_PORT"} ;;
       ready) "$runner" ensure-ready --adapter extension --target "$root" --cdp-port "$CDP_PORT" ;;
       watch) do_watch ;;
@@ -395,7 +512,9 @@ cmd="${1:-interactive}"
 case "$cmd" in
   -h|--help) usage; exit 0 ;;
   interactive) interactive ;;
+  prepare) prepare_extension "$@" ;;
   status|health) status "$@" ;;
+  runtime-status) runtime_status "$@" ;;
   decision|decide) decision "$@" ;;
   ready|ensure-ready) ready "$@" ;;
   watch|start-watch|watcher) do_watch "$@" ;;

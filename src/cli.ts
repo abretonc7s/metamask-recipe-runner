@@ -8,16 +8,16 @@ import { createDoctorReport } from './doctor.ts';
 import { ensureExtensionReady } from './extension-ensure-ready.ts';
 import { resolveExtensionId } from './extension-id.ts';
 import { decideExtensionReadiness } from './extension-runtime-decision.ts';
-// NOTE: extension-runtime.ts loads the farmslot harness at module scope, so it
+// NOTE: extension-runtime.ts loads the recipe harness at module scope, so it
 // is imported LAZILY (dynamic import) only inside the handlers that drive a live
 // runtime. Static-import it here and every command — manifest, doctor,
 // runtime-decision (no --cdp-port) — would fail to load on a checkout without
-// farmslot built. Keep this lazy.
+// local harness packages built. Keep this lazy.
 import { loadActionManifest, validateManifest } from './manifest.ts';
 import { assertAdapter, manifestPath, recipeHarnessPath, recipeHarnessRoot, recipePath, runnerDir } from './paths.ts';
 // runner.ts → adapters.ts → live-adapters/extension/platform/cdp.mjs does a
-// top-level `await importFarmslotHarness()`, so it is imported LAZILY inside
-// runRecipe only. Keeping it static would load the farmslot harness for every
+// top-level harness import, so it is imported LAZILY inside
+// runRecipe only. Keeping it static would load the recipe harness for every
 // command (manifest, doctor, runtime-decision), defeating their independence.
 import type { RecipeRunResult } from '@farmslot/recipe-harness';
 import type { MetaMaskRecipeAdapter } from './types.ts';
@@ -32,7 +32,9 @@ interface ParsedArgs {
 
 interface RuntimeOptions {
   cdpPort?: string;
+  watcherPort?: string;
   launchExistingDist?: boolean;
+  startWatch?: boolean;
   skipExtensionRuntimePrepare?: boolean;
   slot?: string;
   validationRuntimeDir?: string;
@@ -58,7 +60,7 @@ function usage() {
   metamask-recipe doctor --adapter <mobile|extension> --target <repo> [--json]
   metamask-recipe runtime-health --adapter extension --target <repo> --cdp-port <port> [--json]
   metamask-recipe runtime-decision --adapter extension --target <repo> [--cdp-port <port>] [--watch-log <path>] [--record] [--json]
-  metamask-recipe runtime-launch --adapter extension --target <repo> --cdp-port <port> [--chrome-user-data-dir <dir>] [--artifacts-dir <dir>] [--json]
+  metamask-recipe runtime-launch --adapter extension --target <repo> --cdp-port <port> [--start-watch] [--chrome-user-data-dir <dir>] [--artifacts-dir <dir>] [--json]
   metamask-recipe resolve-extension --adapter extension --target <repo> [--cdp-port <port>] [--json]
   metamask-recipe ensure-ready --adapter extension --target <repo> --cdp-port <port> [--json]
   metamask-recipe run <recipe.json> --adapter <mobile|extension> --artifacts-dir <dir> [--project-root <repo>] [--action-manifest <path>] [--cdp-port <port>] [--slot <slot-id>] [--launch-existing-dist] [--json]
@@ -69,7 +71,7 @@ function usage() {
 function parseArgs(argv: string[]): ParsedArgs {
   const positional: string[] = [];
   const options: CliOptions = {};
-  const booleanOptions = new Set(['json', 'launchExistingDist', 'record']);
+  const booleanOptions = new Set(['json', 'launchExistingDist', 'startWatch', 'record']);
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (!arg.startsWith('--')) {
@@ -135,10 +137,16 @@ async function runRecipe(
 ): Promise<RecipeRunResult> {
   const previousCdpPort = process.env.CDP_PORT;
   const previousRecipeCdpPort = process.env.RECIPE_CDP_PORT;
+  const previousWatcherPort = process.env.WATCHER_PORT;
+  const previousMetroPort = process.env.METRO_PORT;
   const previousExtensionAutolaunch = process.env.METAMASK_RECIPE_EXTENSION_AUTOLAUNCH;
   if (runtimeOptions.cdpPort) {
     process.env.CDP_PORT = runtimeOptions.cdpPort;
     process.env.RECIPE_CDP_PORT = runtimeOptions.cdpPort;
+  }
+  if (runtimeOptions.watcherPort) {
+    process.env.WATCHER_PORT = runtimeOptions.watcherPort;
+    process.env.METRO_PORT = runtimeOptions.watcherPort;
   }
   if (runtimeOptions.launchExistingDist) {
     process.env.METAMASK_RECIPE_EXTENSION_AUTOLAUNCH = '1';
@@ -153,12 +161,29 @@ async function runRecipe(
       recipePath: path.resolve(recipe),
       artifactsDir: path.resolve(artifactsDir),
       projectRoot,
+      env: recipeRunEnv(adapter),
     });
   } finally {
     restoreEnv('CDP_PORT', previousCdpPort);
     restoreEnv('RECIPE_CDP_PORT', previousRecipeCdpPort);
+    restoreEnv('WATCHER_PORT', previousWatcherPort);
+    restoreEnv('METRO_PORT', previousMetroPort);
     restoreEnv('METAMASK_RECIPE_EXTENSION_AUTOLAUNCH', previousExtensionAutolaunch);
   }
+}
+
+function recipeRunEnv(adapter: MetaMaskRecipeAdapter): Record<string, string | undefined> {
+  if (adapter !== 'mobile') return {};
+  return {
+    WATCHER_PORT: process.env.WATCHER_PORT ?? process.env.CDP_PORT ?? process.env.RECIPE_CDP_PORT,
+    METRO_PORT: process.env.METRO_PORT ?? process.env.WATCHER_PORT ?? process.env.CDP_PORT ?? process.env.RECIPE_CDP_PORT,
+    CDP_PORT: process.env.CDP_PORT,
+    RECIPE_CDP_PORT: process.env.RECIPE_CDP_PORT,
+    IOS_SIMULATOR: process.env.IOS_SIMULATOR,
+    ANDROID_DEVICE: process.env.ANDROID_DEVICE,
+    ADB_SERIAL: process.env.ADB_SERIAL,
+    ANDROID_SERIAL: process.env.ANDROID_SERIAL,
+  };
 }
 
 async function prepareRuntimeIfNeeded(
@@ -349,6 +374,7 @@ async function handleRuntimeLaunch({ options }: ParsedArgs): Promise<number> {
     optionString(options, 'artifactsDir') ??
       recipeHarnessPath(target, 'extension', 'runtime-launch', new Date().toISOString().replace(/[:.]/gu, '')),
   );
+  const startWatch = optionFlag(options, 'startWatch');
   const liveScript = recipeHarnessPath(target, 'extension', 'scripts', 'live.sh');
   const command = [
     'bash',
@@ -357,7 +383,7 @@ async function handleRuntimeLaunch({ options }: ParsedArgs): Promise<number> {
     target,
     '--cdp-port',
     String(cdpPort),
-    '--launch-existing-dist',
+    startWatch ? '--start-watch' : '--launch-existing-dist',
     '--artifacts-dir',
     artifactsDir,
   ];
@@ -370,7 +396,7 @@ async function handleRuntimeLaunch({ options }: ParsedArgs): Promise<number> {
       cdpPort,
       artifactsDir,
       reason: 'harness_live_script_missing',
-      fix: `Run /mms-recipe-harness install, then rerun: ${runtimeLaunchCommand(target, cdpPort, chromeUserDataDir)}`,
+      fix: `Run metamask-recipe extension prepare --target ${shellQuote(target)}, then rerun: ${runtimeLaunchCommand(target, cdpPort, chromeUserDataDir)}`,
       command,
     });
     printRuntimeLaunchReport(report, optionFlag(options, 'json'));
@@ -422,9 +448,10 @@ async function handleRuntimeLaunch({ options }: ParsedArgs): Promise<number> {
   return 1;
 }
 
-function runtimeLaunchCommand(target: string, cdpPort: number, chromeUserDataDir?: string): string {
+function runtimeLaunchCommand(target: string, cdpPort: number, chromeUserDataDir?: string, startWatch = false): string {
   const base = `metamask-recipe runtime-launch --adapter extension --target ${shellQuote(target)} --cdp-port ${cdpPort}`;
-  return chromeUserDataDir ? `${base} --chrome-user-data-dir ${shellQuote(chromeUserDataDir)}` : base;
+  const withMode = startWatch ? `${base} --start-watch` : base;
+  return chromeUserDataDir ? `${withMode} --chrome-user-data-dir ${shellQuote(chromeUserDataDir)}` : withMode;
 }
 
 function shellQuote(value: string): string {
@@ -592,6 +619,7 @@ async function handleSelfTest({ options }: ParsedArgs): Promise<number> {
 function runtimeOptionsFromCli(options: CliOptions): RuntimeOptions {
   return {
     cdpPort: optionString(options, 'cdpPort'),
+    watcherPort: optionString(options, 'watcherPort') ?? optionString(options, 'metroPort'),
     launchExistingDist: optionFlag(options, 'launchExistingDist'),
     slot: optionString(options, 'slot'),
     validationRuntimeDir: optionString(options, 'validationRuntimeDir'),

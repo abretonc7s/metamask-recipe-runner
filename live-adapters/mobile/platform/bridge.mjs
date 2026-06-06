@@ -38,6 +38,7 @@ export function bridgeEnv(input) {
   /** @type {NodeJS.ProcessEnv} */
   const env = {
     ...process.env,
+    ...(input.context?.env || {}),
     CDP_TIMEOUT: String(input.node?.cdp_timeout_ms ?? process.env.CDP_TIMEOUT ?? '10000'),
   };
   const target = resolveMobileTarget(input);
@@ -56,10 +57,11 @@ export function bridgeEnv(input) {
 }
 
 function resolveMobileTarget(input) {
-  const watcherPort = input.node?.watcher_port ?? input.node?.metro_port ?? input.node?.cdp_port ?? process.env.WATCHER_PORT ?? process.env.CDP_PORT ?? process.env.RECIPE_CDP_PORT;
-  const iosSimulator = input.node?.simulator ?? input.node?.ios_simulator ?? process.env.IOS_SIMULATOR;
-  const androidDevice = input.node?.android_device ?? process.env.ANDROID_DEVICE;
-  const adbSerial = input.node?.adb_serial ?? process.env.ADB_SERIAL ?? process.env.ANDROID_SERIAL ?? androidDevice;
+  const contextEnv = input.context?.env || {};
+  const watcherPort = input.node?.watcher_port ?? input.node?.metro_port ?? input.node?.cdp_port ?? contextEnv.WATCHER_PORT ?? contextEnv.CDP_PORT ?? contextEnv.RECIPE_CDP_PORT ?? process.env.WATCHER_PORT ?? process.env.CDP_PORT ?? process.env.RECIPE_CDP_PORT;
+  const iosSimulator = input.node?.simulator ?? input.node?.ios_simulator ?? contextEnv.IOS_SIMULATOR ?? process.env.IOS_SIMULATOR;
+  const androidDevice = input.node?.android_device ?? contextEnv.ANDROID_DEVICE ?? process.env.ANDROID_DEVICE;
+  const adbSerial = input.node?.adb_serial ?? contextEnv.ADB_SERIAL ?? contextEnv.ANDROID_SERIAL ?? process.env.ADB_SERIAL ?? process.env.ANDROID_SERIAL ?? androidDevice;
   return { watcherPort, iosSimulator, androidDevice, adbSerial };
 }
 

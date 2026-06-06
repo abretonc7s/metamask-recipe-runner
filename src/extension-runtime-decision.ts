@@ -17,12 +17,11 @@ import { recipeWatchLogCandidates } from './paths.ts';
  * single, side-effect-free answer: given a checkout (and optionally a live CDP
  * port), it returns the ONE cheapest action that makes the runtime ready —
  * `install` < `build` (optionally `clean`) < `relaunch` < `ready` — plus the
- * machine-consumable `actions[]` a host runs. The host (farmslot preflight, the
- * recipe-harness skill, or a standalone run) executes; the runner only decides.
+ * machine-consumable `actions[]` a host runs. The host executes; the runner
+ * only decides.
  *
  * This is the single source of truth for "what does the extension runtime need"
- * so the skill stops hand-rolling dist-freshness/build-health probes and the
- * three layers can no longer disagree on the same checkout.
+ * so wrappers do not hand-roll dist-freshness/build-health probes.
  *
  * SIGNALS (pure file/git, plus an optional live CDP probe):
  *  - deps:         install markers present + content fingerprint vs recorded baseline
@@ -31,9 +30,9 @@ import { recipeWatchLogCandidates } from './paths.ts';
  *  - dist:         manifest git-id vs HEAD + uncommitted source → fresh | stale | unknown
  *  - cdp:          live extension health (ONLY when --cdp-port is passed)
  *
- * The deps/cache fingerprints use farmslot preflight's exact algorithm so the
- * runner is the reference spec a future preflight migration can defer to.
- * checkExtensionRuntimeHealth is imported LAZILY (it loads the farmslot harness
+ * The deps/cache fingerprints use the host preflight algorithm so the runner is
+ * the reference implementation.
+ * checkExtensionRuntimeHealth is imported LAZILY (it loads the recipe harness
  * at module scope and FAILs without a live CDP) so the no-browser decision path
  * never touches it.
  */
@@ -115,7 +114,7 @@ interface CdpCheck {
   findings?: string[];
 }
 
-// ── fingerprint inputs (farmslot preflight parity) ────────────────────────────
+// ── fingerprint inputs (host preflight parity) ───────────────────────────────
 const DEPS_INPUTS = ['package.json', 'yarn.lock', '.yarnrc.yml', '.tool-versions'];
 const INSTALL_MARKERS = ['node_modules/.yarn-state.yml', '.yarn/install-state.gz'];
 const WEBPACK_DIRECT_INPUTS = ['package.json', 'yarn.lock', '.yarnrc.yml', '.tool-versions'];
@@ -179,7 +178,7 @@ function depsFingerprint(target: string): string {
 }
 
 /**
- * Webpack-cache fingerprint — farmslot preflight parity: content hash of the
+ * Webpack-cache fingerprint — host preflight parity: content hash of the
  * direct inputs + a recursive walk of development/webpack, pinned to gitHead.
  * Node binary/version are intentionally captured via .tool-versions content
  * (a direct input) rather than the runner's own process.version, because the
@@ -248,7 +247,7 @@ function webpackCacheCheck(target: string): WebpackCacheCheck {
   if (!baseline) {
     // Cold start (no recorded baseline). Fall back to mtime: a cache poisoned by
     // a post-install dedup (ENOENT on a removed nested module) is older than the
-    // install markers. This subsumes the skill's former inline mtime self-heal,
+    // install markers. This subsumes the wrapper's former inline mtime self-heal,
     // so the cache-clear decision lives in one place. `--record` then upgrades
     // this to the precise content fingerprint.
     const cacheMtime = fs.statSync(path.join(target, WEBPACK_CACHE_DIR)).mtimeMs;
@@ -263,7 +262,7 @@ function webpackCacheCheck(target: string): WebpackCacheCheck {
   return { cachePresent: true, status, hasBaseline: true };
 }
 
-// ── signal: webpack watch-log health (port of skill build_health_json) ───────
+// ── signal: webpack watch-log health ─────────────────────────────────────────
 function buildLogCheck(target: string, watchLog?: string): BuildLogCheck {
   const candidates = (
     watchLog
@@ -307,7 +306,7 @@ function uncommittedSource(target: string): string[] {
   return dirty;
 }
 
-// ── signal: dist freshness (port of skill dist_freshness_json) ───────────────
+// ── signal: dist freshness ───────────────────────────────────────────────────
 function distCheck(target: string): DistCheck {
   const manifestPath = path.join(target, 'dist/chrome/manifest.json');
   if (!fs.existsSync(manifestPath)) return { status: 'no-build' };
@@ -340,7 +339,7 @@ function distCheck(target: string): DistCheck {
 async function cdpCheck(target: string, cdpPort?: number): Promise<CdpCheck> {
   if (!cdpPort) return { status: 'skipped' };
   try {
-    // Lazy import: extension-runtime.ts loads the farmslot harness at module
+    // Lazy import: extension-runtime.ts loads the recipe harness at module
     // scope, so it must never be pulled into the no-browser decision path.
     const { checkExtensionRuntimeHealth } = await import('./extension-runtime.ts');
     const report = await checkExtensionRuntimeHealth(target, cdpPort);

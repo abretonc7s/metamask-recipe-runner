@@ -6,10 +6,10 @@ import path from 'node:path';
  * Single source of truth for "which extension id is this MetaMask build".
  *
  * WHY THIS EXISTS. The id was resolved in three different, drifting places —
- * farmslot `launch-browser.sh` (Playwright candidate loop), `reopen-browser.sh`
+ * host `launch-browser.sh` (Playwright candidate loop), `reopen-browser.sh`
  * (`serviceWorkers()[0]`, which grabs Chrome's *component* extensions and broke
  * recovery), and the harness CDP target selector. They disagreed. This module
- * makes the runner the one resolver both farmslot launchers defer to.
+ * makes the runner the one resolver host launchers defer to.
  *
  * The id is **deterministic**: Chrome derives an unpacked extension's id from
  * the `key` in its manifest (base64-decode → sha256 → first 16 bytes → each

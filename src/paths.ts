@@ -3,11 +3,11 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import type {
-  FarmslotHarnessBrowserExtensionModule,
-  FarmslotHarnessCdpModule,
-  FarmslotHarnessModule,
-  FarmslotHarnessReactNativeBridgeModule,
-  FarmslotProtocolModule,
+  RecipeHarnessBrowserExtensionModule,
+  RecipeHarnessCdpModule,
+  RecipeHarnessModule,
+  RecipeHarnessReactNativeBridgeModule,
+  RecipeProtocolModule,
   MetaMaskRecipeAdapter,
 } from './types.ts';
 
@@ -46,46 +46,46 @@ export function recipeWatchLogCandidates() {
   ];
 }
 
-export function resolveLocalFarmslotRoot() {
+export function resolveLocalProtocolRoot() {
   const candidates = [
     process.env.FARMSLOT_ROOT,
-    readConfiguredFarmslotRoot(),
-    findFarmslotRoot(runnerDir),
-    findFarmslotRoot(process.cwd()),
+    readConfiguredProtocolRoot(),
+    findProtocolRoot(runnerDir),
+    findProtocolRoot(process.cwd()),
   ].filter(Boolean);
   const root = candidates[0];
   return root ? path.resolve(root) : undefined;
 }
 
-export function resolveRequiredLocalFarmslotRoot(reason: string) {
-  const root = resolveLocalFarmslotRoot();
+export function resolveRequiredLocalProtocolRoot(reason: string) {
+  const root = resolveLocalProtocolRoot();
   if (!root) {
     throw new Error(
-      `${reason} requires a local Farmslot checkout. Set FARMSLOT_ROOT or create .farmslot-root for this dev-only path.`,
+      `${reason} requires a local protocol/runtime checkout. Set FARMSLOT_ROOT or create .farmslot-root for this dev-only path.`,
     );
   }
   return root;
 }
 
-function readConfiguredFarmslotRoot() {
+function readConfiguredProtocolRoot() {
   const configPath = path.join(runnerDir, '.farmslot-root');
   if (!fs.existsSync(configPath)) return undefined;
   const value = fs.readFileSync(configPath, 'utf8').trim();
   return value || undefined;
 }
 
-function findFarmslotRoot(start) {
+function findProtocolRoot(start) {
   let dir = path.resolve(start);
   while (dir !== path.dirname(dir)) {
-    if (isFarmslotRoot(dir)) return dir;
+    if (isProtocolRoot(dir)) return dir;
     const sibling = path.join(dir, 'farmslot');
-    if (isFarmslotRoot(sibling)) return sibling;
+    if (isProtocolRoot(sibling)) return sibling;
     dir = path.dirname(dir);
   }
   return undefined;
 }
 
-function isFarmslotRoot(candidate) {
+function isProtocolRoot(candidate) {
   return (
     fs.existsSync(path.join(candidate, 'packages/recipe-harness/package.json')) &&
     fs.existsSync(path.join(candidate, 'packages/protocol/package.json'))
@@ -111,52 +111,52 @@ export function readJson(file: string): unknown {
   return JSON.parse(fs.readFileSync(file, 'utf8'));
 }
 
-export async function importFarmslotHarness(): Promise<FarmslotHarnessModule> {
-  return importFarmslotPackage(
+export async function importRecipeHarness(): Promise<RecipeHarnessModule> {
+  return importProtocolPackage(
     '@farmslot/recipe-harness',
     'packages/recipe-harness/src/index.ts',
-  ) as Promise<FarmslotHarnessModule>;
+  ) as Promise<RecipeHarnessModule>;
 }
 
-export async function importFarmslotHarnessRuntimeCdp(): Promise<FarmslotHarnessCdpModule> {
-  return importFarmslotPackage(
+export async function importRecipeHarnessRuntimeCdp(): Promise<RecipeHarnessCdpModule> {
+  return importProtocolPackage(
     '@farmslot/recipe-harness/runtime/cdp',
     'packages/recipe-harness/src/runtime/cdp.ts',
-  ) as Promise<FarmslotHarnessCdpModule>;
+  ) as Promise<RecipeHarnessCdpModule>;
 }
 
-export async function importFarmslotHarnessRuntimeBrowserExtension(): Promise<FarmslotHarnessBrowserExtensionModule> {
-  return importFarmslotPackage(
+export async function importRecipeHarnessRuntimeBrowserExtension(): Promise<RecipeHarnessBrowserExtensionModule> {
+  return importProtocolPackage(
     '@farmslot/recipe-harness/runtime/browser-extension',
     'packages/recipe-harness/src/runtime/browser-extension.ts',
-  ) as Promise<FarmslotHarnessBrowserExtensionModule>;
+  ) as Promise<RecipeHarnessBrowserExtensionModule>;
 }
 
-export async function importFarmslotHarnessRuntimeReactNativeBridge(): Promise<FarmslotHarnessReactNativeBridgeModule> {
-  return importFarmslotPackage(
+export async function importRecipeHarnessRuntimeReactNativeBridge(): Promise<RecipeHarnessReactNativeBridgeModule> {
+  return importProtocolPackage(
     '@farmslot/recipe-harness/runtime/react-native-bridge',
     'packages/recipe-harness/src/runtime/react-native-bridge.ts',
-  ) as Promise<FarmslotHarnessReactNativeBridgeModule>;
+  ) as Promise<RecipeHarnessReactNativeBridgeModule>;
 }
 
-export async function importFarmslotProtocol(): Promise<FarmslotProtocolModule> {
-  return importFarmslotPackage(
+export async function importRecipeProtocol(): Promise<RecipeProtocolModule> {
+  return importProtocolPackage(
     '@farmslot/protocol',
     'packages/protocol/src/index.ts',
-  ) as Promise<FarmslotProtocolModule>;
+  ) as Promise<RecipeProtocolModule>;
 }
 
-async function importFarmslotPackage(packageName: string, localSourceEntry: string) {
+async function importProtocolPackage(packageName: string, localSourceEntry: string) {
   try {
     return await import(packageName);
   } catch (error) {
     if (!isMissingPackageError(error, packageName)) throw error;
   }
 
-  const root = resolveLocalFarmslotRoot();
+  const root = resolveLocalProtocolRoot();
   if (!root) {
     throw new Error(
-      `${packageName} is not installed. Install @farmslot/* packages normally, or set FARMSLOT_ROOT/use npm run dev:link-farmslot while co-developing Farmslot locally.`,
+      `${packageName} is not installed. Install @farmslot/* packages normally, or set FARMSLOT_ROOT/use npm run dev:link-farmslot while co-developing protocol packages locally.`,
     );
   }
   return import(pathToFileURL(path.join(root, localSourceEntry)).href);

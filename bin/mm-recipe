@@ -7,11 +7,14 @@ Usage:
   mm-recipe                         interactive menu
   mm-recipe ios                     start/reuse Metro, launch iOS dev client
   mm-recipe android                 start/reuse Metro, launch Android dev client
+  mm-recipe prepare                 install harness, start/reuse runtime, optionally setup wallet
+    --target <repo> --platform ios|android --port <port> --simulator <sim> --adb-serial <serial> --runtime-dir <dir> --wallet-setup
   mm-recipe setup:ios               ios + setup wallet fixture
   mm-recipe setup:android           android + setup wallet fixture
   mm-recipe refresh                 start/reuse Metro, relaunch detected dev client
   mm-recipe logs                    tail Metro log
   mm-recipe status                  app route/account status
+  mm-recipe runtime-status [--json] structured Metro/bundle/bridge status
   mm-recipe route                   current route
   mm-recipe navigate <Route> [json] navigate by React Navigation route
   mm-recipe unlock [password]       unlock with fixture password if omitted
@@ -34,6 +37,7 @@ runner="$script_dir/metamask-recipe"
 runner_root="$(cd "$script_dir/.." && pwd -P)"
 bridge="$runner_root/live-adapters/mobile/bridge-runtime/cdp-bridge.cjs"
 setup_wallet_script="$runner_root/live-adapters/mobile/bridge-runtime/setup-wallet.sh"
+install_script="$runner_root/scripts/inject-mobile-harness.sh"
 
 find_mobile_root() {
   local dir="$(pwd -P)"
@@ -81,7 +85,7 @@ init_context() {
     [ -n "${IOS_SIMULATOR:-}" ] || export IOS_SIMULATOR="mm-$slot"
   fi
   [ -n "${CDP_PORT:-}" ] || export CDP_PORT="${WATCHER_PORT:-}"
-  mkdir -p "$root/.agent" "$root/temp/recipe-artifacts"
+  mkdir -p "$root/${RECIPE_RUNTIME_DIR:-temp/recipe/runtime}" "$root/temp/recipe-artifacts"
 }
 
 
@@ -150,25 +154,59 @@ metro_ready() {
   curl -sf --max-time 2 "http://localhost:${WATCHER_PORT:-8081}/status" 2>/dev/null | grep -q 'packager-status:running'
 }
 
+
+clear_stale_metro_listener() {
+  local pids
+  pids="$(lsof -nP -iTCP:${WATCHER_PORT:-8081} -sTCP:LISTEN -t 2>/dev/null | tr '\n' ' ' || true)"
+  [ -n "$pids" ] || return 0
+  log "Clearing stale Metro listener on port ${WATCHER_PORT}: $pids"
+  # shellcheck disable=SC2086
+  kill $pids 2>/dev/null || true
+  sleep 2
+}
+
+
+start_metro_tmux_window() {
+  local metro_workers="$1" metro_log="$2" metro_pid="$3"
+  local session window cmd
+  [ -n "${TMUX:-}" ] || return 1
+  command -v tmux >/dev/null 2>&1 || return 1
+  session="$(tmux display-message -p '#S' 2>/dev/null || true)"
+  [ -n "$session" ] || return 1
+  window="metro-${WATCHER_PORT}"
+  tmux kill-window -t "${session}:${window}" >/dev/null 2>&1 || true
+  cmd="env CI=1 EXPO_NO_TYPESCRIPT_SETUP=1 WATCHER_PORT=${WATCHER_PORT} METRO_MAX_WORKERS=${metro_workers} yarn expo start --port ${WATCHER_PORT} > ${metro_log} 2>&1"
+  tmux new-window -d -t "$session" -n "$window" -c "$root" "$cmd"
+  printf 'tmux:%s:%s\n' "$session" "$window" > "$metro_pid"
+  log "Started Metro in tmux window ${session}:${window}"
+}
+
 start_metro() {
   init_context
   if metro_ready; then
     log "Metro already running on port ${WATCHER_PORT}"
     return 0
   fi
+  clear_stale_metro_listener
   local metro_workers="${METRO_MAX_WORKERS:-2}"
+  local runtime_dir="${RECIPE_RUNTIME_DIR:-temp/recipe/runtime}"
+  local metro_log="$runtime_dir/metro.log"
+  local metro_pid="$runtime_dir/metro.pid"
   log "Starting Metro on port ${WATCHER_PORT} (METRO_MAX_WORKERS=${metro_workers})"
   (
     cd "$root"
-    : > .agent/metro.log
-    nohup env WATCHER_PORT="$WATCHER_PORT" METRO_MAX_WORKERS="$metro_workers" yarn expo start --port "$WATCHER_PORT" > .agent/metro.log 2>&1 &
-    echo $! > .agent/metro.pid
+    mkdir -p "$(dirname "$metro_log")"
+    : > "$metro_log"
+    start_metro_tmux_window "$metro_workers" "$metro_log" "$metro_pid" || {
+      nohup env CI=1 EXPO_NO_TYPESCRIPT_SETUP=1 WATCHER_PORT="$WATCHER_PORT" METRO_MAX_WORKERS="$metro_workers" yarn expo start --port "$WATCHER_PORT" </dev/null > "$metro_log" 2>&1 &
+      echo $! > "$metro_pid"
+    }
   )
   for _ in $(seq 1 90); do
-    metro_ready && { log "Metro ready: http://localhost:${WATCHER_PORT}/status"; log "Metro log: .agent/metro.log (tail with: recipe logs)"; return 0; }
+    metro_ready && { log "Metro ready: http://localhost:${WATCHER_PORT}/status"; log "Metro log: $metro_log (tail with: recipe logs)"; return 0; }
     sleep 1
   done
-  tail -80 "$root/.agent/metro.log" >&2 || true
+  tail -80 "$root/$metro_log" >&2 || true
   echo "mm-recipe: Metro did not become ready on port ${WATCHER_PORT}" >&2
   return 1
 }
@@ -182,6 +220,24 @@ sim_udid_for_target() {
     return 0
   fi
   xcrun simctl list devices available | sed -n "s/.*${target} (\([0-9A-Fa-f-]*\)) (.*/\1/p" | head -1
+}
+
+
+ios_app_installed() {
+  local target="$1" bundle_id="$2"
+  xcrun simctl get_app_container "$target" "$bundle_id" app >/dev/null 2>&1
+}
+
+install_ios_app() {
+  local target="$1" bundle_id="$2"
+  if ios_app_installed "$target" "$bundle_id"; then
+    return 0
+  fi
+  log "iOS dev client ${bundle_id} is not installed on ${target}; installing with yarn start:ios (WATCHER_PORT=${WATCHER_PORT})"
+  (
+    cd "$root"
+    env WATCHER_PORT="$WATCHER_PORT" METRO_PORT="${METRO_PORT:-$WATCHER_PORT}" IOS_SIMULATOR="$target" EXPO_NO_TYPESCRIPT_SETUP=1 yarn start:ios
+  )
 }
 
 show_simulator() {
@@ -222,6 +278,7 @@ launch_ios() {
   boot_simulator_if_needed "$target"
   show_simulator "$target"
   bundle_id="${IOS_BUNDLE_ID:-io.metamask.MetaMask}"
+  install_ios_app "$target" "$bundle_id"
   xcrun simctl spawn "$target" defaults write "$bundle_id" EXDevMenuIsOnboardingFinished -bool YES 2>/dev/null || true
   encoded="$(python3 - <<PY
 import urllib.parse
@@ -299,9 +356,9 @@ screenshot() {
 
 tail_logs() {
   init_context
-  local log_file="$root/.agent/metro.log"
-  [ -f "$log_file" ] || { echo "mm-recipe: Metro log missing: .agent/metro.log. Start with: recipe ios|android" >&2; return 1; }
-  log "tailing .agent/metro.log (Ctrl-C to stop)"
+  local log_file="$root/${RECIPE_RUNTIME_DIR:-temp/recipe/runtime}/metro.log"
+  [ -f "$log_file" ] || { echo "mm-recipe: Metro log missing: ${RECIPE_RUNTIME_DIR:-temp/recipe/runtime}/metro.log. Start with: recipe ios|android" >&2; return 1; }
+  log "tailing ${RECIPE_RUNTIME_DIR:-temp/recipe/runtime}/metro.log (Ctrl-C to stop)"
   tail -f "$log_file"
 }
 
@@ -316,17 +373,252 @@ refresh_mobile() {
 stop_metro() {
   init_context
   local pids=""
-  [ -f "$root/.agent/metro.pid" ] && pids="$(cat "$root/.agent/metro.pid" 2>/dev/null || true)"
-  pids="$pids $(lsof -nP -iTCP:${WATCHER_PORT:-8081} -sTCP:LISTEN -t 2>/dev/null | tr '\n' ' ')"
+  local metro_pid="$root/${RECIPE_RUNTIME_DIR:-temp/recipe/runtime}/metro.pid"
+  local marker=""
+  [ -f "$metro_pid" ] && marker="$(cat "$metro_pid" 2>/dev/null || true)"
+  case "$marker" in
+    tmux:*)
+      local target="${marker#tmux:}"
+      log "Stopping Metro tmux window ${target}"
+      tmux kill-window -t "$target" >/dev/null 2>&1 || true
+      ;;
+    ''|*[!0-9]*)
+      ;;
+    *)
+      pids="$marker"
+      ;;
+  esac
+  pids="$pids $(lsof -nP -iTCP:${WATCHER_PORT:-8081} -sTCP:LISTEN -t 2>/dev/null | tr '\n' ' ' || true)"
   if [ -n "$(printf '%s' "$pids" | tr -d ' ')" ]; then
     log "Stopping Metro on port ${WATCHER_PORT}: $pids"
     kill $pids 2>/dev/null || true
-    sleep 1
-    kill -9 $pids 2>/dev/null || true
   else
     log "No Metro listener on port ${WATCHER_PORT:-8081}"
   fi
-  rm -f "$root/.agent/metro.pid"
+  rm -f "$metro_pid"
+}
+
+wait_for_bridge() {
+  init_context
+  local log_file="$root/${RECIPE_RUNTIME_DIR:-temp/recipe/runtime}/bridge-status.log"
+  local metro_log="$root/${RECIPE_RUNTIME_DIR:-temp/recipe/runtime}/metro.log"
+  mkdir -p "$(dirname "$log_file")"
+  local attempt max_polls
+  max_polls="${MOBILE_BRIDGE_READY_POLLS:-90}"
+  for attempt in $(seq 1 "$max_polls"); do
+    if bridge_cmd status > "$log_file" 2>&1 && node - "$log_file" <<'NODE'
+const fs = require('fs');
+const value = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
+const targets = Array.isArray(value) ? value : [value];
+if (!targets.some((target) => target && typeof target === 'object' && target.route)) process.exit(1);
+NODE
+    then
+      log "Mobile bridge ready"
+      return 0
+    fi
+    if [ "$attempt" = "1" ] || [ $((attempt % 5)) -eq 0 ]; then
+      log "Waiting for Mobile bridge (${attempt}/${max_polls}): $(bridge_wait_reason "$log_file" "$metro_log")"
+    fi
+    sleep 2
+  done
+  cat "$log_file" >&2 || true
+  echo "mm-recipe: Mobile bridge did not become ready on port ${WATCHER_PORT:-8081}" >&2
+  return 1
+}
+
+bridge_wait_reason() {
+  local status_file="$1"
+  local metro_log="$2"
+  if ! metro_ready; then
+    printf 'Metro is not reachable on port %s' "${WATCHER_PORT:-8081}"
+    return 0
+  fi
+  local targets
+  targets="$(curl -sf --max-time 2 "http://localhost:${WATCHER_PORT:-8081}/json/list" 2>/dev/null || true)"
+  if [ "$targets" = "[]" ] || [ -z "$targets" ]; then
+    printf 'Metro is running; no React Native debug target yet'
+    bridge_bundle_progress "$metro_log"
+    return 0
+  fi
+  if [ -s "$status_file" ] && grep -qxF '[]' "$status_file"; then
+    printf 'React Native target is visible; in-app bridge is not ready yet'
+    bridge_bundle_progress "$metro_log"
+    return 0
+  fi
+  printf 'bridge probe failed'
+  bridge_bundle_progress "$metro_log"
+}
+
+bridge_bundle_progress() {
+  local metro_log="$1"
+  [ -f "$metro_log" ] || return 0
+  local progress
+  progress="$(grep -E '^[[:space:]]*(iOS|Android).*index\\.(js|tsx?).*%|Bundl(ed|ing)|Finished' "$metro_log" | tail -1 | tr -d '\r' || true)"
+  [ -n "$progress" ] && printf ' (%s)' "$progress"
+}
+
+runtime_status() {
+  local target="" port="" runtime_dir_arg=""
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --target) target="$2"; shift 2 ;;
+      --port|--cdp-port) port="$2"; shift 2 ;;
+      --runtime-dir) runtime_dir_arg="$2"; shift 2 ;;
+      --json) shift ;;
+      -h|--help)
+        echo "Usage: mm-recipe runtime-status [--target <repo>] [--port <port>] [--runtime-dir <dir>] [--json]"
+        return 0
+        ;;
+      *) echo "mm-recipe runtime-status: unknown arg: $1" >&2; return 2 ;;
+    esac
+  done
+  [ -n "$target" ] && cd "$target"
+  [ -n "$runtime_dir_arg" ] && export RECIPE_RUNTIME_DIR="$runtime_dir_arg"
+  [ -n "$port" ] && export WATCHER_PORT="$port" CDP_PORT="${CDP_PORT:-$port}"
+  init_context
+  local runtime_dir="${RECIPE_RUNTIME_DIR:-temp/recipe/runtime}"
+  local runtime_abs="$root/$runtime_dir"
+  local status_file="$runtime_abs/runtime-status.json"
+  local metro_log="$runtime_abs/metro.log"
+  mkdir -p "$runtime_abs"
+  node - "$root" "$runtime_dir" "${WATCHER_PORT:-8081}" "$metro_log" "$bridge" "$status_file" <<'NODE'
+const fs = require('fs');
+const http = require('http');
+const cp = require('child_process');
+const [target, runtimeDir, port, metroLog, bridge, statusFile] = process.argv.slice(2);
+
+function get(path) {
+  return new Promise((resolve) => {
+    const req = http.get(`http://localhost:${port}${path}`, { timeout: 1500 }, (res) => {
+      let body = '';
+      res.on('data', (chunk) => { body += chunk; });
+      res.on('end', () => resolve({ ok: res.statusCode >= 200 && res.statusCode < 300, body }));
+    });
+    req.on('timeout', () => { req.destroy(); resolve({ ok: false, body: '' }); });
+    req.on('error', () => resolve({ ok: false, body: '' }));
+  });
+}
+
+function bundleStatus() {
+  if (!fs.existsSync(metroLog)) return { phase: 'unknown', source: null };
+  const lines = fs.readFileSync(metroLog, 'utf8').split(/\r?\n/u).filter(Boolean);
+  const latest = [...lines].reverse().find((line) =>
+    /^\s*(iOS|Android).*index\.(js|tsx?).*%/u.test(line) ||
+    /Bundl(ed|ing)|Finished/u.test(line)
+  );
+  if (!latest) return { phase: 'unknown', source: metroLog };
+  const progress = /^(?:\s*)(iOS|Android).*?([0-9]+(?:\.[0-9]+)?)%/u.exec(latest);
+  if (progress) {
+    const percent = Number(progress[2]);
+    return {
+      phase: percent >= 100 ? 'bundled' : 'bundling',
+      platform: progress[1].toLowerCase(),
+      percent,
+      detail: latest.trim(),
+      source: metroLog,
+    };
+  }
+  return { phase: /Finished|Bundled/u.test(latest) ? 'bundled' : 'bundling', detail: latest.trim(), source: metroLog };
+}
+
+function bridgeStatus() {
+  try {
+    const out = cp.execFileSync(process.execPath, [bridge, 'status'], {
+      cwd: target,
+      env: { ...process.env, APP_ROOT: target, WATCHER_PORT: port },
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+      timeout: 5000,
+    });
+    const value = JSON.parse(out || 'null');
+    const targets = Array.isArray(value) ? value : [value];
+    const readyTarget = targets.find((item) => item && typeof item === 'object' && item.route);
+    return { ready: Boolean(readyTarget), targetCount: targets.filter(Boolean).length, status: value, error: null };
+  } catch (error) {
+    return { ready: false, targetCount: 0, status: null, error: error.stderr?.toString?.() || error.message };
+  }
+}
+
+(async () => {
+  const metroRaw = await get('/status');
+  const metroReachable = metroRaw.ok && /packager-status:running/u.test(metroRaw.body);
+  const listRaw = await get('/json/list');
+  let targets = [];
+  let debugTargetError = null;
+  try {
+    targets = JSON.parse(listRaw.body || '[]');
+  } catch (error) {
+    debugTargetError = error.message;
+    targets = [];
+  }
+  if (!Array.isArray(targets)) {
+    debugTargetError = 'Metro /json/list did not return an array';
+    targets = [];
+  }
+  const bridge = bridgeStatus();
+  const bundle = bundleStatus();
+  const reason = !metroReachable
+    ? 'metro-down'
+    : targets.length === 0
+      ? (bundle.phase === 'bundling' ? 'bundle-in-progress' : 'debug-target-missing')
+      : !bridge.ready
+        ? 'bridge-not-ready'
+        : 'ready';
+  const status = {
+    schemaVersion: 1,
+    adapter: 'mobile',
+    target,
+    runtimeDir,
+    updatedAt: new Date().toISOString(),
+    ready: reason === 'ready',
+    reason,
+    metro: { reachable: metroReachable, port: Number(port) },
+    bundle,
+    debugTarget: { present: targets.length > 0, count: targets.length, error: debugTargetError },
+    bridge: { ready: bridge.ready, targetCount: bridge.targetCount, error: bridge.error, status: bridge.status },
+  };
+  fs.writeFileSync(statusFile, `${JSON.stringify(status, null, 2)}\n`);
+  console.log(JSON.stringify(status, null, 2));
+})();
+NODE
+}
+
+prepare_mobile() {
+  local target="" platform="${PLATFORM:-ios}" port="${WATCHER_PORT:-${METRO_PORT:-}}" simulator="" adb_serial="" wallet_setup=false runtime_dir="${RECIPE_RUNTIME_DIR:-temp/recipe/runtime}"
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --target) target="$2"; shift 2 ;;
+      --platform) platform="$2"; shift 2 ;;
+      --port) port="$2"; shift 2 ;;
+      --simulator) simulator="$2"; shift 2 ;;
+      --adb-serial) adb_serial="$2"; shift 2 ;;
+      --runtime-dir) runtime_dir="$2"; shift 2 ;;
+      --wallet-setup) wallet_setup=true; shift ;;
+      -h|--help)
+        echo "Usage: mm-recipe prepare [--target <repo>] [--platform ios|android] [--port <port>] [--simulator <sim>] [--adb-serial <serial>] [--runtime-dir <dir>] [--wallet-setup]"
+        return 0
+        ;;
+      *) echo "mm-recipe prepare: unknown arg: $1" >&2; return 2 ;;
+    esac
+  done
+  [ -n "$target" ] && cd "$target"
+  export RECIPE_RUNTIME_DIR="$runtime_dir"
+  [ -n "$port" ] && export WATCHER_PORT="$port" METRO_PORT="$port" CDP_PORT="${CDP_PORT:-$port}"
+  [ -n "$simulator" ] && export IOS_SIMULATOR="$simulator"
+  if [ -n "$adb_serial" ] && [ "$adb_serial" != "{{adb_serial}}" ]; then
+    export ADB_SERIAL="$adb_serial" ANDROID_SERIAL="$adb_serial"
+  fi
+  init_context
+  "$install_script" --target "$root"
+  case "$platform" in
+    ios) launch_ios ;;
+    android) launch_android ;;
+    *) echo "mm-recipe prepare: unknown platform: $platform" >&2; return 2 ;;
+  esac
+  wait_for_bridge
+  if $wallet_setup; then
+    setup_wallet
+  fi
 }
 
 run_recipe() {
@@ -335,20 +627,21 @@ run_recipe() {
   [ -f "$recipe" ] || { echo "mm-recipe: recipe not found: $recipe" >&2; exit 2; }
   local out="$root/temp/recipe-artifacts/$(basename "$recipe" .json)-$(date -u +%Y%m%dT%H%M%SZ)"
   log "root=$root port=${WATCHER_PORT:-?} sim=${IOS_SIMULATOR:-${ANDROID_DEVICE:-${ADB_SERIAL:-?}}} out=$out"
-  exec "$runner" run "$recipe" --adapter mobile --project-root "$root" --artifacts-dir "$out" "$@"
+  exec "$runner" run "$recipe" --adapter mobile --project-root "$root" --watcher-port "$WATCHER_PORT" --artifacts-dir "$out" "$@"
 }
 
 interactive() {
   init_context
   echo "mm-recipe (${root}, port=${WATCHER_PORT:-?}, sim=${IOS_SIMULATOR:-${ANDROID_DEVICE:-${ADB_SERIAL:-?}}})"
   PS3='choose> '
-  select choice in refresh ios android logs status setup-wallet unlock accounts screenshot doctor actions stop quit; do
+  select choice in refresh ios android logs status runtime-status setup-wallet unlock accounts screenshot doctor actions stop quit; do
     case "$choice" in
       refresh) refresh_mobile ;;
       ios) launch_ios ;;
       android) launch_android ;;
       logs) tail_logs ;;
       status) bridge_cmd status | pipe_pretty ;;
+      runtime-status) runtime_status | pipe_pretty ;;
       setup-wallet) setup_wallet ;;
       unlock) bridge_cmd unlock "$(fixture_password)" ;;
       accounts) bridge_cmd list-accounts | pipe_pretty ;;
@@ -367,6 +660,8 @@ cmd="${1:-interactive}"
 case "$cmd" in
   -h|--help) usage; exit 0 ;;
   interactive) interactive ;;
+  prepare) prepare_mobile "$@" ;;
+  runtime-status) runtime_status "$@" ;;
   ios|start) launch_ios ;;
   android) launch_android ;;
   setup:ios) launch_ios; setup_wallet ;;

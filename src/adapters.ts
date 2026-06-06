@@ -240,6 +240,7 @@ function uiInputFor(context: ActionExecutionContext, input: MetaMaskUiActionInpu
       nodeId: context.nodeId,
       projectRoot: context.projectRoot,
       artifactsDir: context.artifactsDir,
+      env: context.env,
     },
   };
 }

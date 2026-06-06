@@ -4,9 +4,8 @@ import { resolveExtensionId } from './extension-id.ts';
 
 /**
  * "Drive the extension to a ready state" — the single source of truth for the
- * open-home + collapse-to-one-tab + verify-healthy logic that farmslot's
- * launch-browser.sh and reopen-browser.sh (and preflight's post-freeze reopen)
- * each hand-rolled. They left duplicate home tabs, which trips
+ * open-home + collapse-to-one-tab + verify-healthy logic that host launchers
+ * and reopen helpers previously hand-rolled. They left duplicate home tabs, which trips
  * runtime-health's "exactly one home page" contract and makes agents see a
  * broken-looking runtime.
  *
@@ -130,7 +129,7 @@ export async function ensureExtensionReady(
   const after = homePages(await jsonList(cdpPort), extensionId).length;
 
   // Verify with the single health source. Lazy import: extension-runtime.ts
-  // loads the farmslot harness at module scope, so it must not be pulled into
+  // loads the recipe harness at module scope, so it must not be pulled into
   // any no-CDP path.
   let health: EnsureReadyResult['health'] = { status: 'unknown', findings: [] };
   try {

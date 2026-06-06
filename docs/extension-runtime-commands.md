@@ -1,80 +1,77 @@
 # Extension runtime commands
 
-The single source of truth for resolving / deciding / verifying the MetaMask
-**extension** runtime. Both the recipe-harness skill and farmslot defer to these
-commands — do not re-implement extension-id resolution, build/cache decisions, or
-"is it ready" checks anywhere else.
+The runner is the source of truth for MetaMask Extension harness injection,
+readiness decisions, extension-id resolution, and live CDP health checks.
 
-All commands take `--adapter extension --target <repo>`; pass `--json` for machine
-output. Run via the installed wrapper (`<harness>/extension/runner/bin/metamask-recipe`)
-or this repo's `bin/metamask-recipe`.
+## Prepare
 
-## `resolve-extension`
-
-```
-metamask-recipe resolve-extension --adapter extension --target <repo> [--cdp-port <port>] [--json]
+```bash
+metamask-recipe extension prepare --target <repo> [--cdp-port <port>] [--runtime-dir temp/recipe/runtime]
 ```
 
-Returns this build's extension id, derived **deterministically** from the loaded
-dist's manifest `key` (Chrome's unpacked-id algorithm) — never from
-`serviceWorkers()[0]` (which can return a Chrome component extension). Non-JSON
-prints the bare id for `$(...)` capture. `--cdp-port` only adds `verified` (is the
-id present in the live browser); it never changes the answer.
+Installs the Extension harness under `temp/recipe/harness/extension/`. With
+`--cdp-port`, it also runs a live health probe.
 
-`{ extensionId, source: 'manifest-key'|'cdp-target'|'none', verified }`
+## Runtime status
 
-## `runtime-decision`
-
-```
-metamask-recipe runtime-decision --adapter extension --target <repo> [--cdp-port <port>] [--watch-log <path>] [--record] [--json]
+```bash
+metamask-recipe extension runtime-status --target <repo> [--cdp-port <port>] [--json]
 ```
 
-The deterministic "what does the runtime need next" answer. **Branch on `.decision`,
-never re-parse webpack logs.** Cheapest-first precedence:
+Writes a structured status payload to stdout and
+`temp/recipe/runtime/runtime-status.json`. Hosts should poll this JSON instead
+of parsing logs. The payload includes fixture presence and the resolved fixture
+path so hosts can surface missing setup before launching Chrome.
 
-`install` (deps missing/stale) → `build` (`clean:true` if webpack cache poisoned or
-build errored; else dist missing/stale/source-dirty) → `relaunch` (build fresh, CDP
-down or unhealthy) → `ready` (CDP healthy). Without `--cdp-port` the highest answer is
-`relaunch` (liveness unverified).
+## Launch runtime
 
-Signals: deps install-state, webpack-cache fingerprint (farmslot preflight's exact
-algorithm: content hash of package.json/yarn.lock/.yarnrc.yml/.tool-versions +
-`development/webpack` walk + gitHead; cold-start mtime fallback), build-log health,
-dist git-id freshness, live CDP health. `--record` snapshots the deps/cache baseline
-after a confirmed-good build (run it post-install/post-build so staleness detection is
-precise next time). Exit 0 whenever advice was computed.
-
-`{ decision, clean, reasonCode, reasons[], checks{deps,webpackCache,buildLog,dist,cdp}, actions[] }`
-
-## `ensure-ready`
-
+```bash
+metamask-recipe runtime-launch --adapter extension --target <repo> --cdp-port <port> [--json]
+metamask-recipe runtime-launch --adapter extension --target <repo> --cdp-port <port> --start-watch [--json]
 ```
+
+Launches Chrome with the installed harness helper, seeds the wallet fixture, and
+runs live smoke verification. `--start-watch` is the clean-build path: it clears
+the webpack cache, starts the harness-owned watcher, waits for a clean compile,
+then launches and verifies the runtime.
+
+## Decide readiness
+
+```bash
+metamask-recipe extension decision --target <repo> [--cdp-port <port>] [--json]
+# equivalent typed form:
+metamask-recipe runtime-decision --adapter extension --target <repo> [--cdp-port <port>] [--json]
+```
+
+Returns the cheapest next action: `install`, `build`, `relaunch`, or `ready`.
+Hosts should branch on `.decision` and execute the returned `actions[]`.
+
+## Ensure ready
+
+```bash
+metamask-recipe extension ready --target <repo> --cdp-port <port> [--json]
+# equivalent typed form:
 metamask-recipe ensure-ready --adapter extension --target <repo> --cdp-port <port> [--json]
 ```
 
-Drives the live browser to exactly **one healthy** `home.html` tab (opens one if none,
-closes extras) and verifies via `runtime-health`. This is the single source for the
-"one home tab + healthy" invariant that `runtime-health` requires — use it after any
-launch/reopen instead of hand-closing tabs. Exit 0 when ready.
+Converges the live browser to one healthy `home.html` tab and verifies with
+`runtime-health`.
 
-`{ extensionId, opened, homeTabs:{before,closed,after}, ready, reasonCode, health }`
+## Health
 
-## `runtime-health`
-
-```
+```bash
+metamask-recipe extension status --target <repo> --cdp-port <port> [--json]
+# equivalent typed form:
 metamask-recipe runtime-health --adapter extension --target <repo> --cdp-port <port> [--json]
 ```
 
-Read-only liveness probe of the running extension (exactly one home page + background
-reachable). Does not open/close tabs. `PASS`/`FAIL`.
+Read-only liveness probe for the running extension.
 
-## The deterministic loop (autonomous agents)
+## Extension id
 
-Slots run **`watch=off`** (no background watcher), so the agent rebuilds explicitly:
-
-```
-edit source → runtime-decision (→ build) → one-shot rebuild → ensure-ready → ready
+```bash
+metamask-recipe resolve-extension --adapter extension --target <repo> [--cdp-port <port>] [--json]
 ```
 
-The host runs the rebuild (farmslot: `refresh-build.sh`; standalone: a one-shot
-`yarn start`-then-stop). The runner only decides and verifies.
+Resolves the deterministic unpacked extension id from `dist/chrome/manifest.json`
+and optionally verifies it against CDP.

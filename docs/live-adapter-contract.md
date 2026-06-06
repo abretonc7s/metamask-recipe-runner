@@ -1,9 +1,11 @@
 # Live Adapter Contract
 
-The MetaMask runner implements Farmslot Recipe Protocol v1 (Farmslot `docs/RECIPE-PROTOCOL-V1.md`) through `@farmslot/recipe-harness`. Project-specific live behavior is supplied by manifest-declared action adapters.
+The MetaMask runner implements Recipe Protocol v1 through the shared recipe
+harness package. Project-specific live behavior is supplied by
+manifest-declared action adapters.
 
-Official `ui.*` semantics are implemented by Farmslot
-`createStandardUiAdapters({ transport })` plus Farmslot CDP/React Native base
+Official `ui.*` semantics are implemented by
+`createStandardUiAdapters({ transport })` plus shared CDP/React Native base
 transports. The MetaMask runner supplies only tiny runtime bindings that point
 those base transports at the Extension CDP page or Mobile React Native bridge.
 MetaMask-specific actions remain separate manifest-declared live adapters.
@@ -17,7 +19,7 @@ $METAMASK_RECIPE_LIVE_ADAPTER_DIR/shared/<domain>/<action-local-name>.mjs
 <runner>/live-adapters/shared/<domain>/<action-local-name>.mjs
 ```
 
-`.js` and `.sh` are also supported. Fully-qualified flat filenames are still searched after grouped paths, but new adapter code should use grouped modules. Do not add `ui.*` files here; official UI actions go through Farmslot base transports. Examples:
+Legacy external `.js` adapters are still resolved for compatibility, and `.sh` remains available for edge orchestration. New committed adapter code should use grouped `.mjs` modules. Fully-qualified flat filenames are still searched after grouped paths, but new adapter code should use grouped modules. Do not add `ui.*` files here; official UI actions go through shared base transports. Examples:
 
 ```text
 live-adapters/extension/perps/ensure_positions.mjs
@@ -86,13 +88,14 @@ domain capability useful across many tasks, such as `metamask.perps.start_state`
 `ui.scroll` is part of the current executable contract and action-validation must
 prove both normal scrolling and `scroll_into_view` before screenshot capture.
 `ui.gesture` is intentionally not advertised yet; drag/swipe proof must wait
-until Farmslot + this runner expose and validate that action on both platforms.
+until the shared runtime and this runner expose and validate that action on both
+platforms.
 
 
 
 ## Flow catalog follow-up
 
-Action adapters fulfill one manifest-declared operation. Production recipes should also be able to call domain flow catalogs that compose these operations into idempotent `ensure_*` start states. These flows are owned by this runner/domain layer, not by Farmslot generic packages or skill glue.
+Action adapters fulfill one manifest-declared operation. Production recipes should also be able to call domain flow catalogs that compose these operations into idempotent `ensure_*` start states. These flows are owned by this runner/domain layer, not by shared runtime packages or wrapper glue.
 
 For Perps, recipes should use the runner-provided `metamask.perps.start_state({ network, provider, page, market, positions, orders })` and `metamask.perps.teardown_state(...)` actions as the default reproducibility boundary. These actions compose primitive bulk operations such as `close_positions({ mode: "all" })` and `close_orders({ mode: "all" })` instead of multiplying one-off cleanup actions.
 

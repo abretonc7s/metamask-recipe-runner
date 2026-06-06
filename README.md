@@ -1,139 +1,137 @@
 # MetaMask Recipe Runner
 
-MetaMask-specific runner package for Recipe Protocol v1. This runner consumes the published `@farmslot/protocol` and `@farmslot/recipe-harness` packages, with an explicit local override only for protocol co-development.
+MetaMask-specific runner for Recipe Protocol v1. Protocol reference:
+https://farmslot.io/docs/reference/recipe-protocol-v1.
 
-This project owns the MetaMask action catalog, manifests, and live adapters for
-MetaMask Mobile and Extension recipe validation. It intentionally stays outside
-`metamask-skills`: skills are thin UX wrappers that resolve this project, install
-it into `temp/recipe/harness/<adapter>/runner/`, and call `bin/metamask-recipe`.
+This package owns the reusable MetaMask recipe surface: manifests, Mobile and
+Extension live adapters, harness injection, runtime checks, and the public
+`metamask-recipe` CLI. Hosts and thin wrappers should invoke this CLI instead of
+copying runner logic.
+
+## Public CLI
+
+```bash
+metamask-recipe mobile prepare --target <metamask-mobile> --platform ios --port 8062 --simulator mm-2 --runtime-dir temp/recipe/runtime
+metamask-recipe mobile runtime-status --target <metamask-mobile> --port 8062 --json
+metamask-recipe mobile status
+metamask-recipe mobile run <recipe.json> --artifacts-dir <dir>
+
+metamask-recipe extension prepare --target <metamask-extension> --cdp-port 6662 --runtime-dir temp/recipe/runtime
+metamask-recipe extension runtime-status --target <metamask-extension> --cdp-port 6662 --json
+metamask-recipe extension decision --target <metamask-extension> --cdp-port 6662 --json
+metamask-recipe extension status --target <metamask-extension> --cdp-port 6662 --json
+metamask-recipe extension run <recipe.json> --artifacts-dir <dir>
+```
+
+Direct typed commands are also available:
+
+```bash
+metamask-recipe manifest --adapter mobile --json
+metamask-recipe manifest --adapter extension --json
+metamask-recipe actions --adapter mobile --json
+metamask-recipe actions --adapter extension --json
+metamask-recipe runtime-decision --adapter extension --target <repo> --cdp-port <port> --json
+metamask-recipe runtime-health --adapter extension --target <repo> --cdp-port <port> --json
+metamask-recipe runtime-launch --adapter extension --target <repo> --cdp-port <port> --json
+metamask-recipe runtime-launch --adapter extension --target <repo> --cdp-port <port> --start-watch --json
+metamask-recipe ensure-ready --adapter extension --target <repo> --cdp-port <port> --json
+metamask-recipe run <recipe.json> --adapter <mobile|extension> --project-root <repo> --artifacts-dir <dir> --json
+```
+
+## Layout
+
+```text
+bin/
+  metamask-recipe              public CLI wrapper
+  mm-recipe                    Mobile convenience/runtime commands
+  mme-recipe                   Extension convenience/runtime commands
+
+scripts/
+  inject-mobile-harness.sh
+  cleanup-mobile-harness.sh
+  inject-extension-harness.mjs
+  cleanup-extension-harness.mjs
+  extension/                    Extension runtime helper scripts installed into the harness
+  validate-action-e2e-artifacts.mjs
+  lib/                         shared path/hash helpers
+
+src/
+  cli.ts                       typed Recipe Protocol CLI
+  runner.ts                    adapter registration over the shared recipe harness
+  adapters.ts                  manifest action bindings
+  extension-*.ts               Extension runtime decision/readiness logic
+  doctor.ts                    static/runtime diagnostics
+
+live-adapters/
+  mobile/                      React Native bridge + Mobile action implementations
+  extension/                   CDP/browser-extension action implementations
+
+manifests/                     executable action manifests
+recipes/                       reusable smoke/action-validation recipes
+```
+
+Both platforms use the same harness root convention:
+`temp/recipe/harness/<platform>/`. Injection writes a manifest, a runner delegate,
+manifest/recipe snapshots, and a cleanup command.
+
+Both platforms also expose structured runtime state:
+`metamask-recipe <platform> runtime-status --json`. The command writes the same
+payload to `temp/recipe/runtime/runtime-status.json` so external hosts can poll
+one JSON document instead of parsing terminal logs.
+
+Runtime file extensions are intentional, not arbitrary. Typed runner logic lives
+in `src/**/*.ts`; direct no-build adapters/helpers use `.mjs`; `.cjs` is reserved
+for compatibility islands; shell scripts stay at the OS/device edge. See
+[Runtime File Conventions](docs/runtime-file-conventions.md).
+
+Extension status includes fixture presence and the resolved fixture path. Launch
+uses `RECIPE_WALLET_FIXTURE` when set, then local runtime fixture locations. Use
+`runtime-launch --start-watch` when the proof needs a clean webpack build; it
+clears the webpack cache, starts the harness-owned watcher, seeds the wallet
+fixture, launches Chrome, and runs live smoke verification.
 
 ## Boundary
 
-The shared action surface is a durable capability contract, not a checklist of
-one ticket's acceptance criteria. Add `metamask.*` actions only for
-parameterized product/domain operations that will be reused across many recipes,
-such as start-state convergence, read/assert state, placing orders,
-closing selected positions, or cancelling selected orders.
+- Shared protocol/runtime packages own graph execution, protocol validation,
+  trace/summary/artifact writing, and generic `ui.*` transports.
+- This runner owns MetaMask semantics: `metamask.wallet.*`,
+  `metamask.perps.*`, action manifests, live adapters, and platform injection.
+- Hosts and wrappers own orchestration only: resolve the runner, call
+  `metamask-recipe <platform> prepare`, then run recipes.
 
-Do not add shared actions for ticket IDs, POCs, exact test IDs, one-off copy,
-banner/style/placement assertions, or other task-local proof details. For those
-cases, keep the recipe small and use:
+Do not add shared actions for ticket IDs, exact copy, test IDs, styling, or other
+one-off proof details. Use official `ui.*` actions and screenshot claims for
+visible acceptance criteria. Direct product/controller calls are allowed only for
+setup, teardown, or read/assert paths that do not fabricate user-visible proof.
 
-- official `ui.*` actions for visible user interaction and presence checks;
-- screenshot `claims` and artifacts for visual/copy/layout proof;
-- task-local composed flows in the task artifact when a helper is useful only
-  for that task;
-- safe direct read/controller calls for setup or assertions when the visible UI
-  path is not the acceptance criterion.
+Every non-terminal recipe node should include `intent` so the live HUD can show
+one clear current action while trace files retain full detail.
 
-## HUD intent contract
+## Local protocol co-development
 
-Every non-terminal recipe node must include `intent`. The default HUD shows status/progress plus exactly one current intent line. `detail` is hidden unless explicitly configured, errors may appear as the only secondary line, and flow/call nesting stays trace/debug metadata. Mobile uses the same structured HUD payload as Extension when the in-app bridge supports it, with a legacy `show-step` fallback for older checkouts.
-
-## Proof interaction contract
-
-The action manifest is the executable contract. A Recipe Protocol v1 official action
-is callable only when this runner advertises it in
-`supported_official_actions`; unsupported official actions stay absent until they
-are implemented and proven on both Mobile and Extension.
-
-Use the smallest layer that proves the claim:
-
-- Use `metamask.*` domain actions for setup, teardown, idempotent start state,
-  read/assert checks, and supported product/controller API operations where the
-  visual path would add repetitive setup noise.
-- Use official `ui.*` actions for the interaction window that must be visible in
-  human proof: pressing buttons, entering input, keypad taps, scrolling an item
-  into view, screenshots, and future drag/swipe gestures.
-- Never use direct controller/CDP calls to fake a user-visible acceptance
-  criterion. If the claim is “the UI lets a user do X”, the proof recipe must
-  drive X through `ui.*` and then assert/capture the result.
-- `ui.gesture` is not in the MetaMask manifests yet. Drag/swipe recipes must wait
-  until the runner exposes it and action-validation proves it on Mobile and
-  Extension.
-
-The current action-validation recipes exercise every manifest-declared action and
-specifically include both generic `ui.scroll` and the `scroll_into_view` variant
-before screenshot proof.
-
-- Farmslot owns the protocol schema, graph execution, trace/summary/artifact
-  package writing, and generic `ui.*`/CDP/React Native transports.
-- This runner owns MetaMask project semantics: `metamask.wallet.*`,
-  `metamask.perps.*`, action manifests, and platform live-adapter bindings.
-- Skills own user-facing install/verify/cook/doctor flows only.
-
-## Required environment
-
-A normal checkout/install should resolve Farmslot through package dependencies:
-`@farmslot/protocol` and `@farmslot/recipe-harness`. `FARMSLOT_ROOT` is only a
-local-development override used while changing Farmslot and this runner together.
-
-Skills resolve this runner in this order: explicit local override (`METAMASK_RECIPE_RUNNER_SOURCE` / `RECIPE_RUNNER_SOURCE`), sibling checkout named `metamask-recipe-runner`, npm package, then git fallback.
-
-During the ADR-58 pilot the npm package is published under Arthur's personal namespace as `@deeeed/metamask-recipe-runner` so reviewers can reproduce the skills without a local checkout. If ADR-58 is accepted, ownership should migrate to a MetaMask/Consensys namespace and release process.
-
-## Commands
+Normal installs use package dependencies: `@farmslot/protocol` and
+`@farmslot/recipe-harness`. For local protocol/runtime package development only:
 
 ```bash
-bin/metamask-recipe manifest --adapter mobile --json
-bin/metamask-recipe manifest --adapter extension --json
-bin/metamask-recipe actions --adapter mobile --json
-bin/metamask-recipe actions --adapter extension --action ui.press --json
-bin/metamask-recipe doctor --adapter mobile --target /path/to/metamask-mobile --json
-bin/metamask-recipe run recipes/smoke.mobile.recipe.json --adapter mobile --target /path/to/metamask-mobile --artifacts-dir /tmp/mm-smoke --json
-bin/metamask-recipe self-test --artifacts-dir /tmp/metamask-runner-self-test --json
+FARMSLOT_ROOT=/path/to/protocol-checkout npm run dev:link-farmslot
 ```
 
-## Local Farmslot co-development
-
-This repo imports the real Farmslot package names (`@farmslot/protocol` and
-`@farmslot/recipe-harness`) and expects them to be installed like normal runtime
-dependencies. Do not commit relative `../../farmslot` TypeScript paths or local
-type shims.
-
-When actively changing Farmslot packages before publishing, opt into local
-symlinks explicitly:
-
-```bash
-FARMSLOT_ROOT=/path/to/farmslot npm run dev:link-farmslot
-```
-
-The check script can also resolve a sibling/local Farmslot checkout and writes
-only an ignored `.tmp/tsconfig.check.json`.
-
-
-## Recipe quality follow-up: composed start states
-
-The current runner proves manifest-declared action execution. Recipe v1 should not be treated as production-complete until the runner also publishes reusable flow catalogs for setup/start-state composition. The intended model is:
-
-```text
-metamask.wallet.ensure_unlocked
-metamask.perps.close_positions({ mode: "all" })
-metamask.perps.close_orders({ mode: "all" })
-metamask.perps.ensure_positions({ state: "none", mode: "all" })
-metamask.perps.ensure_orders({ state: "none", mode: "all" })
-metamask.perps.start_state({ network, provider, page, market, positions, orders })
-```
-
-`close_positions` and `close_orders` are primitive bulk operations: selector params decide whether they close one market, several markets, or everything returned by the product. `ensure_*` flows are idempotent convergence wrappers: inspect current state, call the primitive operations only when needed, prove postconditions, and fail if the requested baseline cannot be reached. For Perps, `start_state` should own starting page, mainnet/testnet, provider selection such as Hyperliquid, optional selected market, and optional position/order preconditions. See `docs/perps-flow-catalog.md`.
-
-Proof recipes should then record only the AC-specific interaction while setup remains visible in `trace.json`/`summary.json`.
+Do not commit local TypeScript path shims.
 
 ## Validation
 
 ```bash
-npm run check
-npm run self-test
+yarn check
+bash -n bin/metamask-recipe bin/mm-recipe scripts/inject-mobile-harness.sh scripts/cleanup-mobile-harness.sh
+node --check scripts/inject-extension-harness.mjs
+node --check scripts/cleanup-extension-harness.mjs
+node --check scripts/extension/launch-chrome-detached.cjs
 ```
 
-For proof-capable actions, run the action-validation recipes on live Mobile and
-Extension targets, then validate the output:
+For live validation, run platform `prepare`, run a smoke/action-validation recipe,
+then validate artifacts:
 
 ```bash
 node scripts/validate-action-e2e-artifacts.mjs <artifacts-dir> manifests/mobile.action-manifest.json mobile
 node scripts/validate-action-e2e-artifacts.mjs <artifacts-dir> manifests/extension.action-manifest.json extension
 ```
-
-## TypeScript package surface
-
-The public runner surface is TypeScript (`src/*.ts`) and exports typed factory, manifest, and doctor contracts from `src/index.ts`. The executable wrapper still invokes Farmslot's `tsx` so installed runners work on Node versions that do not execute `.ts` files directly. Live adapters remain small `.mjs` scripts because they are copied into target checkouts and executed as standalone Node programs.

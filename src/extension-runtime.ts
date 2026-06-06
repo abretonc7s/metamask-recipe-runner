@@ -2,12 +2,13 @@ import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { importFarmslotHarnessRuntimeBrowserExtension, importFarmslotHarnessRuntimeCdp, recipeRuntimeDir, resolveLocalFarmslotRoot, resolveRequiredLocalFarmslotRoot, runnerDir } from './paths.ts';
+import { importRecipeHarnessRuntimeBrowserExtension, importRecipeHarnessRuntimeCdp, recipeRuntimeDir, resolveLocalProtocolRoot, resolveRequiredLocalProtocolRoot, runnerDir } from './paths.ts';
 
-// Runtime health uses package dependencies. Launching a canonical Farmslot browser
-// remains a dev-only path because it needs pool/project scripts from a checkout.
-const { CdpSession, jsonGet, sleep } = await importFarmslotHarnessRuntimeCdp();
-const { extensionIdFromTarget } = await importFarmslotHarnessRuntimeBrowserExtension();
+// Runtime health uses package dependencies. Launching a host-managed validation
+// browser remains a dev-only path because it needs pool/project scripts from a
+// checkout.
+const { CdpSession, jsonGet, sleep } = await importRecipeHarnessRuntimeCdp();
+const { extensionIdFromTarget } = await importRecipeHarnessRuntimeBrowserExtension();
 
 export interface ExtensionRuntimeOptions {
   projectRoot: string;
@@ -54,11 +55,11 @@ export async function prepareExtensionRuntime(
   if (options.launchExistingDist) {
     if (!slot) {
       throw new Error(
-        `Cannot launch canonical Extension runtime for ${projectRoot}: no Farmslot slot maps to this repo. ` +
+        `Cannot launch host-managed Extension runtime for ${projectRoot}: no configured slot maps to this repo. ` +
           'Pass --slot <slot-id> or add the checkout to pool/*.json.',
       );
     }
-    launch = await launchFarmslotValidationBrowser({
+    launch = await launchHostValidationBrowser({
       projectRoot,
       cdpPort,
       slotId: slot.id,
@@ -251,7 +252,7 @@ export function formatHealthFailure(report: ExtensionRuntimeHealthReport, projec
   return [
     `Extension runtime health check failed for ${projectRoot} on CDP port ${report.cdpPort}.`,
     ...report.findings.map((finding) => `- ${finding}`),
-    'Use the canonical Farmslot validation launcher, for example:',
+    'Use the host-managed validation launcher, for example:',
     `  bin/metamask-recipe run <recipe.json> --adapter extension --target ${projectRoot} --slot <slot-id> --cdp-port ${report.cdpPort} --launch-existing-dist --artifacts-dir <artifacts-dir>`,
     `Health details: ${JSON.stringify(report.details)}`,
   ].join('\n');
@@ -261,7 +262,7 @@ function resolveCdpPort(rawPort: string | number | undefined, slot: ResolvedSlot
   const raw = rawPort ?? process.env.CDP_PORT ?? process.env.RECIPE_CDP_PORT ?? slot?.cdpPort;
   const port = Number(raw);
   if (!Number.isInteger(port) || port <= 0) {
-    throw new Error('Extension runtime requires --cdp-port, CDP_PORT, RECIPE_CDP_PORT, or a Farmslot slot with resources.browser.cdp_port.');
+    throw new Error('Extension runtime requires --cdp-port, CDP_PORT, RECIPE_CDP_PORT, or a configured slot with resources.browser.cdp_port.');
   }
   return port;
 }
@@ -273,12 +274,12 @@ interface ResolvedSlot {
 }
 
 function resolveExtensionSlot(projectRoot: string, requestedSlot?: string): ResolvedSlot | null {
-  const farmslotRoot = resolveLocalFarmslotRoot();
-  if (!farmslotRoot) {
-    if (requestedSlot) throw new Error('Extension slot lookup requires a local Farmslot checkout when --slot is provided.');
+  const protocolRoot = resolveLocalProtocolRoot();
+  if (!protocolRoot) {
+    if (requestedSlot) throw new Error('Extension slot lookup requires a local host checkout when --slot is provided.');
     return null;
   }
-  const poolsDir = path.join(farmslotRoot, 'pool');
+  const poolsDir = path.join(protocolRoot, 'pool');
   if (!fs.existsSync(poolsDir)) return null;
   for (const file of fs.readdirSync(poolsDir)) {
     // Only canonical pool files: skip backups (`*.json.bak.*`) and any non-.json,
@@ -306,16 +307,16 @@ function resolveExtensionSlot(projectRoot: string, requestedSlot?: string): Reso
   return null;
 }
 
-async function launchFarmslotValidationBrowser(options: {
+async function launchHostValidationBrowser(options: {
   projectRoot: string;
   cdpPort: number;
   slotId: string;
   validationRuntimeDir: string;
 }): Promise<ExtensionRuntimeLaunchResult> {
-  const farmslotRoot = resolveRequiredLocalFarmslotRoot('Extension validation browser launch');
-  const script = path.join(farmslotRoot, 'projects/metamask-extension-farm/setup/launch-validation-browser.sh');
+  const protocolRoot = resolveRequiredLocalProtocolRoot('Extension validation browser launch');
+  const script = path.join(protocolRoot, 'projects/metamask-extension-farm/setup/launch-validation-browser.sh');
   if (!fs.existsSync(script)) {
-    throw new Error(`Canonical Extension validation launcher not found: ${script}`);
+    throw new Error(`Extension validation launcher not found: ${script}`);
   }
   await killCdpPort(options.cdpPort);
   const result = await runProcess('bash', [
@@ -327,15 +328,15 @@ async function launchFarmslotValidationBrowser(options: {
     options.validationRuntimeDir,
     '--no-landing',
   ], {
-    cwd: farmslotRoot,
+    cwd: protocolRoot,
     env: process.env,
     timeoutMs: 180_000,
   });
   if (result.timedOut) {
-    throw new Error(`Canonical Extension validation launcher timed out after 180000ms.\n${result.stdout}\n${result.stderr}`);
+    throw new Error(`Extension validation launcher timed out after 180000ms.\n${result.stdout}\n${result.stderr}`);
   }
   if (result.exitCode !== 0) {
-    throw new Error(`Canonical Extension validation launcher failed with exit ${result.exitCode}.\n${result.stdout}\n${result.stderr}`);
+    throw new Error(`Extension validation launcher failed with exit ${result.exitCode}.\n${result.stdout}\n${result.stderr}`);
   }
   return {
     launched: true,

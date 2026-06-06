@@ -8,15 +8,15 @@ const runnerDir = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   '..',
 );
-const farmslotRoot = findFarmslotRoot(runnerDir) ?? findFarmslotRoot(process.cwd());
+const protocolRoot = findProtocolRoot(runnerDir) ?? findProtocolRoot(process.cwd());
 const localTsc = path.join(runnerDir, 'node_modules/typescript/bin/tsc');
-const farmslotTsc = farmslotRoot
-  ? path.join(farmslotRoot, 'node_modules/typescript/bin/tsc')
+const protocolTsc = protocolRoot
+  ? path.join(protocolRoot, 'node_modules/typescript/bin/tsc')
   : undefined;
-const tsc = fs.existsSync(localTsc) ? localTsc : farmslotTsc;
+const tsc = fs.existsSync(localTsc) ? localTsc : protocolTsc;
 if (!tsc || !fs.existsSync(tsc)) {
   throw new Error(
-    'TypeScript compiler not found. Install this package normally, or set FARMSLOT_ROOT/use npm run dev:link-farmslot while co-developing Farmslot locally.',
+    'TypeScript compiler not found. Install this package normally, or set FARMSLOT_ROOT/use npm run dev:link-farmslot while co-developing protocol packages locally.',
   );
 }
 const generatedTsconfig = path.join(runnerDir, '.tmp', 'tsconfig.check.json');
@@ -29,15 +29,16 @@ fs.writeFileSync(
       compilerOptions: {
         baseUrl: '..',
         types: ['node'],
-        ...localTypescriptOverrides(generatedTsconfig, farmslotRoot),
+        ...localTypescriptOverrides(generatedTsconfig, protocolRoot),
       },
     },
     null,
     2,
   )}\n`,
 );
+disallowPlainSourceJs();
 run(process.execPath, [tsc, '--noEmit', '--project', generatedTsconfig]);
-for (const file of listFiles(runnerDir, (name) => name.endsWith('.mjs'))) {
+for (const file of listFiles(runnerDir, (name) => name.endsWith('.mjs') || name.endsWith('.cjs'))) {
   run(process.execPath, ['--check', file]);
 }
 validateCommittedRecipes();
@@ -77,21 +78,21 @@ function run(command, args) {
   if (result.status !== 0) process.exit(result.status ?? 1);
 }
 
-function findFarmslotRoot(start) {
+function findProtocolRoot(start) {
   const candidates = [process.env.FARMSLOT_ROOT, start].filter(Boolean);
   for (const candidate of candidates) {
     let dir = path.resolve(candidate);
     while (dir !== path.dirname(dir)) {
-      if (isFarmslotRoot(dir)) return dir;
+      if (isProtocolRoot(dir)) return dir;
       const sibling = path.join(dir, 'farmslot');
-      if (isFarmslotRoot(sibling)) return sibling;
+      if (isProtocolRoot(sibling)) return sibling;
       dir = path.dirname(dir);
     }
   }
   return null;
 }
 
-function isFarmslotRoot(dir) {
+function isProtocolRoot(dir) {
   return (
     fs.existsSync(path.join(dir, 'packages/recipe-harness/package.json')) &&
     fs.existsSync(path.join(dir, 'packages/protocol/package.json'))
@@ -101,12 +102,20 @@ function isFarmslotRoot(dir) {
 function listFiles(root, predicate) {
   const out = [];
   for (const entry of fs.readdirSync(root, { withFileTypes: true })) {
-    if (entry.name === '.git' || entry.name === 'node_modules') continue;
+    if (['.git', '.omc', '.tmp', 'dist', 'node_modules'].includes(entry.name)) continue;
     const full = path.join(root, entry.name);
     if (entry.isDirectory()) out.push(...listFiles(full, predicate));
     else if (entry.isFile() && predicate(entry.name)) out.push(full);
   }
   return out;
+}
+
+function disallowPlainSourceJs() {
+  const files = listFiles(runnerDir, (name) => name.endsWith('.js'));
+  if (files.length === 0) return;
+  console.error('Plain source .js files are not allowed; use .mjs for no-build scripts or .ts for typed core code:');
+  for (const file of files) console.error(`  - ${path.relative(runnerDir, file)}`);
+  process.exit(1);
 }
 
 function validateCommittedRecipes() {

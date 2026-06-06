@@ -5,8 +5,8 @@ import { createRequire } from 'node:module';
 import path from 'node:path';
 
 import {
-  importFarmslotHarnessRuntimeBrowserExtension,
-  importFarmslotHarnessRuntimeCdp,
+  importRecipeHarnessRuntimeBrowserExtension,
+  importRecipeHarnessRuntimeCdp,
   extensionIdPath,
   recipeHarnessPath,
   walletFixturePath,
@@ -21,8 +21,8 @@ const {
   jsonGet,
   retryJsonGet,
   sleep,
-} = await importFarmslotHarnessRuntimeCdp();
-const { extensionIdFromTarget } = await importFarmslotHarnessRuntimeBrowserExtension();
+} = await importRecipeHarnessRuntimeCdp();
+const { extensionIdFromTarget } = await importRecipeHarnessRuntimeBrowserExtension();
 
 export { dataTestId };
 

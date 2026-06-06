@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 
-import { resolveRequiredLocalFarmslotRoot, runnerDir } from './paths.ts';
+import { resolveRequiredLocalProtocolRoot, runnerDir } from './paths.ts';
 
 function actionFileStem(action: string) {
   return String(action).replace(/[^a-zA-Z0-9._-]/g, '_');
@@ -150,7 +150,7 @@ function commandFor(file: string) {
     (existsSync(localTsx)
       ? localTsx
       : path.join(
-          resolveRequiredLocalFarmslotRoot('TypeScript live adapter execution'),
+          resolveRequiredLocalProtocolRoot('TypeScript live adapter execution'),
           'node_modules/.bin/tsx',
         ));
   return { command: tsxBin, args: [file] };

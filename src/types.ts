@@ -6,11 +6,11 @@ export interface CreateMetaMaskRunnerOptions {
   actionManifest?: RecipeActionManifestDocument;
 }
 
-export type FarmslotHarnessModule = typeof import('@farmslot/recipe-harness');
-export type FarmslotHarnessBrowserExtensionModule = typeof import('@farmslot/recipe-harness/runtime/browser-extension');
-export type FarmslotHarnessCdpModule = typeof import('@farmslot/recipe-harness/runtime/cdp');
-export type FarmslotHarnessReactNativeBridgeModule = typeof import('@farmslot/recipe-harness/runtime/react-native-bridge');
-export type FarmslotProtocolModule = typeof import('@farmslot/protocol');
+export type RecipeHarnessModule = typeof import('@farmslot/recipe-harness');
+export type RecipeHarnessBrowserExtensionModule = typeof import('@farmslot/recipe-harness/runtime/browser-extension');
+export type RecipeHarnessCdpModule = typeof import('@farmslot/recipe-harness/runtime/cdp');
+export type RecipeHarnessReactNativeBridgeModule = typeof import('@farmslot/recipe-harness/runtime/react-native-bridge');
+export type RecipeProtocolModule = typeof import('@farmslot/protocol');
 
 export interface MetaMaskDoctorReport {
   schemaVersion: 1;
