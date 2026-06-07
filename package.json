@@ -1,9 +1,9 @@
 {
   "name": "@deeeed/metamask-recipe-runner",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "bin": {
-    "metamask-recipe": "./bin/metamask-recipe"
+    "metamask-recipe": "bin/metamask-recipe"
   },
   "scripts": {
     "dev:link-farmslot": "node scripts/link-local-farmslot.mjs",
