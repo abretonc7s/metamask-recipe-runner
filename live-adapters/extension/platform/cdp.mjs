@@ -70,191 +70,84 @@ function resolveRelativeArtifactPath(artifactsDir, relPath) {
   return { relative: normalized, absolute };
 }
 
-function isCaptureScreenshotFailure(error) {
-  const message = String(error?.message ?? error);
-  return message.includes('Page.captureScreenshot') || message.includes('captureScreenshot');
+function captureHelperPath() {
+  return process.env.CAPTURE_HELPER_PATH || 'capture-helper';
 }
 
+function parsePositivePid(value) {
+  const pid = Number(String(value ?? '').trim());
+  return Number.isInteger(pid) && pid > 0 ? pid : null;
+}
 
-async function captureDomRasterFallback(page, context, relPath, metadata, cause) {
-  const { relative, absolute } = resolveRelativeArtifactPath(context.artifactsDir, relPath);
-  await mkdir(path.dirname(absolute), { recursive: true });
-  // Use a fresh CDP session for the fallback. A timed-out Page.captureScreenshot
-  // can leave the original session with an in-flight command, which makes a
-  // subsequent Runtime.evaluate fallback unreliable even though the page is
-  // still controllable.
-  const session = await CdpSession.connect(page.target.webSocketDebuggerUrl);
-  try {
-    await session.call('Runtime.enable');
-    const result = await session.call('Runtime.evaluate', {
-      expression: `(() => new Promise((resolve, reject) => {
-        try {
-          const width = Math.max(320, Math.min(900, window.innerWidth || document.documentElement.clientWidth || 500));
-          const height = Math.max(500, Math.min(1200, window.innerHeight || document.documentElement.clientHeight || 700));
-          const canvas = document.createElement('canvas');
-          canvas.width = width;
-          canvas.height = height;
-          const context2d = canvas.getContext('2d');
-          if (!context2d) throw new Error('DOM raster canvas context unavailable.');
+async function readPidFile(file) {
+  if (!(await canAccess(file))) return null;
+  return parsePositivePid(await readFile(file, 'utf8'));
+}
 
-          const transparent = (color) => !color || color === 'transparent' || color === 'rgba(0, 0, 0, 0)';
-          const htmlStyle = getComputedStyle(document.documentElement);
-          const bodyStyle = document.body ? getComputedStyle(document.body) : htmlStyle;
-          context2d.fillStyle = transparent(bodyStyle.backgroundColor)
-            ? (transparent(htmlStyle.backgroundColor) ? '#000' : htmlStyle.backgroundColor)
-            : bodyStyle.backgroundColor;
-          context2d.fillRect(0, 0, width, height);
+async function captureHelperBrowserPid(context, port) {
+  const explicit = parsePositivePid(process.env.METAMASK_RECIPE_EXTENSION_BROWSER_PID);
+  if (explicit) return explicit;
 
-          const elements = Array.from(document.querySelectorAll('body, body *'));
-          const visibleEntries = [];
-          for (const element of elements) {
-            const style = getComputedStyle(element);
-            if (style.display === 'none' || style.visibility === 'hidden' || Number(style.opacity) === 0) continue;
-            const rect = element.getBoundingClientRect();
-            if (rect.width <= 0 || rect.height <= 0) continue;
-            if (rect.right < 0 || rect.bottom < 0 || rect.left > width || rect.top > height) continue;
-            visibleEntries.push({ element, style, rect });
-          }
-
-          const clampRect = (rect) => ({
-            x: Math.max(0, rect.left),
-            y: Math.max(0, rect.top),
-            width: Math.min(width, rect.right) - Math.max(0, rect.left),
-            height: Math.min(height, rect.bottom) - Math.max(0, rect.top),
-          });
-
-          for (const entry of visibleEntries) {
-            const { style, rect } = entry;
-            const box = clampRect(rect);
-            if (box.width <= 0 || box.height <= 0) continue;
-            if (!transparent(style.backgroundColor)) {
-              context2d.globalAlpha = Math.max(0, Math.min(1, Number(style.opacity) || 1));
-              context2d.fillStyle = style.backgroundColor;
-              context2d.fillRect(box.x, box.y, box.width, box.height);
-              context2d.globalAlpha = 1;
-            }
-            const borderColor = style.borderTopColor;
-            const borderWidth = Number.parseFloat(style.borderTopWidth || '0');
-            if (borderWidth > 0 && !transparent(borderColor)) {
-              context2d.strokeStyle = borderColor;
-              context2d.lineWidth = Math.min(borderWidth, 4);
-              context2d.strokeRect(box.x, box.y, box.width, box.height);
-            }
-          }
-
-          const directText = (element) => Array.from(element.childNodes)
-            .filter((node) => node.nodeType === Node.TEXT_NODE)
-            .map((node) => node.textContent || '')
-            .join(' ')
-            .replace(/\\s+/g, ' ')
-            .trim();
-          const elementText = (element) => {
-            if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
-              return element.value || element.placeholder || element.getAttribute('aria-label') || '';
-            }
-            const tag = element.tagName.toLowerCase();
-            const direct = directText(element);
-            if (direct) return direct;
-            if (tag === 'button' || element.getAttribute('role') === 'button' || element.dataset?.testid) {
-              return (element.innerText || element.textContent || element.getAttribute('aria-label') || '').replace(/\\s+/g, ' ').trim();
-            }
-            return element.getAttribute('aria-label') || '';
-          };
-          const drawText = (text, box, style) => {
-            if (!text || box.width < 6 || box.height < 6) return;
-            const fontSize = Math.max(8, Math.min(28, Number.parseFloat(style.fontSize || '12') || 12));
-            context2d.font = [style.fontStyle, style.fontWeight, fontSize + 'px', style.fontFamily || 'sans-serif'].filter(Boolean).join(' ');
-            context2d.fillStyle = transparent(style.color) ? '#fff' : style.color;
-            context2d.textBaseline = 'top';
-            const words = text.split(/\\s+/).filter(Boolean);
-            const lineHeight = Math.ceil(fontSize * 1.25);
-            let line = '';
-            let y = box.y + Math.max(2, Math.min(8, box.height * 0.12));
-            const x = box.x + Math.max(2, Math.min(10, box.width * 0.04));
-            const maxWidth = Math.max(12, box.width - (x - box.x) * 2);
-            const maxY = box.y + box.height - lineHeight;
-            for (const word of words) {
-              const candidate = line ? line + ' ' + word : word;
-              if (context2d.measureText(candidate).width > maxWidth && line) {
-                context2d.fillText(line, x, y, maxWidth);
-                y += lineHeight;
-                line = word;
-                if (y > maxY) break;
-              } else {
-                line = candidate;
-              }
-            }
-            if (line && y <= maxY + 1) context2d.fillText(line, x, y, maxWidth);
-          };
-
-          for (const entry of visibleEntries) {
-            const box = clampRect(entry.rect);
-            const text = elementText(entry.element);
-            if (!text) continue;
-            drawText(text, box, entry.style);
-          }
-
-          resolve({ data: canvas.toDataURL('image/png'), width, height });
-        } catch (error) {
-          reject(error);
-        }
-      }))()`,
-      awaitPromise: true,
-      returnByValue: true,
-    });
-    if (result.exceptionDetails) {
-      throw new Error(
-        result.exceptionDetails.exception?.description ??
-        result.exceptionDetails.text ??
-        'DOM raster screenshot fallback failed.',
-      );
-    }
-    const dataUrl = result.result?.value?.data;
-    if (typeof dataUrl !== 'string' || !dataUrl.startsWith('data:image/png;base64,')) {
-      throw new Error('DOM raster screenshot fallback did not return PNG data.');
-    }
-    await writeFile(absolute, Buffer.from(dataUrl.slice('data:image/png;base64,'.length), 'base64'));
-    return {
-      path: relative,
-      type: 'screenshot',
-      nodeId: context.nodeId,
-      label: metadata?.label ?? `${context.nodeId} screenshot`,
-      category: metadata?.category ?? 'evidence',
-      metadata: {
-        fallback: 'extension-dom-raster',
-        cdpFailure: String(cause?.message ?? cause),
-        width: result.result.value.width,
-        height: result.result.value.height,
-      },
-    };
-  } finally {
-    session.close();
+  const lsof = await runProcess('lsof', ['-nP', `-iTCP:${port}`, '-sTCP:LISTEN', '-t'], {
+    cwd: context.projectRoot,
+    env: process.env,
+    timeoutMs: 5000,
+  });
+  if (lsof.exitCode === 0) {
+    const pid = parsePositivePid(lsof.stdout.split(/\s+/u).find(Boolean));
+    if (pid) return pid;
   }
+
+  const runtimeJson = path.join(context.artifactsDir, 'extension-runtime/runtime.json');
+  if (await canAccess(runtimeJson)) {
+    const runtime = JSON.parse(await readFile(runtimeJson, 'utf8'));
+    const pid = parsePositivePid(runtime?.pid);
+    if (pid) return pid;
+  }
+
+  const recipeRuntime = path.join(context.projectRoot, 'temp/recipe/runtime');
+  for (const name of ['chromium.pid', 'browser.pid']) {
+    const pid = await readPidFile(path.join(recipeRuntime, name));
+    if (pid) return pid;
+  }
+
+  throw new Error(
+    `Extension ui.screenshot requires a live browser PID for capture-helper snapshot, but none could be resolved from CDP port ${port}, extension-runtime/runtime.json, or temp/recipe/runtime/*.pid.`,
+  );
 }
 
-async function captureMacScreenFallback(context, relPath, metadata, cause) {
-  if (process.platform !== 'darwin') throw cause;
+async function captureHelperSnapshot(page, context, relPath, metadata) {
+  if (process.platform !== 'darwin') {
+    throw new Error('Extension ui.screenshot uses capture-helper snapshot and is currently supported only on macOS.');
+  }
   const { relative, absolute } = resolveRelativeArtifactPath(context.artifactsDir, relPath);
   await mkdir(path.dirname(absolute), { recursive: true });
-  const result = await runProcess('screencapture', ['-x', absolute], {
+
+  await page.session.call('Page.bringToFront');
+  const pid = await captureHelperBrowserPid(context, page.port);
+  const result = await runProcess(captureHelperPath(), ['snapshot', '--pid', String(pid), '--output', absolute], {
     cwd: context.projectRoot,
     env: process.env,
     timeoutMs: Number(metadata?.timeoutMs ?? 30000),
   });
   if (result.exitCode !== 0) {
     throw new Error(
-      `CDP Page.captureScreenshot failed (${String(cause?.message ?? cause)}), and macOS screencapture fallback failed: ${result.stderr || result.stdout}`,
+      `capture-helper snapshot failed for Extension ui.screenshot (pid ${pid}): ${result.stderr || result.stdout}`,
     );
   }
+  const details = parseJsonObject(result.stdout);
   return {
     path: relative,
     type: 'screenshot',
     nodeId: context.nodeId,
     label: metadata?.label ?? `${context.nodeId} screenshot`,
     category: metadata?.category ?? 'evidence',
+    mimeType: 'image/png',
     metadata: {
-      fallback: 'macos-screencapture',
-      cdpFailure: String(cause?.message ?? cause),
+      provider: 'capture-helper',
+      mode: 'snapshot',
+      pid,
+      ...(details ? { captureHelper: details } : {}),
     },
   };
 }
@@ -301,13 +194,37 @@ function runProcess(command, args, options) {
       env: options.env || process.env,
       stdio: ['ignore', 'pipe', 'pipe'],
     });
+    let timer = null;
     let stdout = '';
     let stderr = '';
+    if (options.timeoutMs) {
+      timer = setTimeout(() => {
+        child.kill('SIGTERM');
+        reject(new Error(`Command timed out after ${options.timeoutMs}ms: ${command} ${args.join(' ')}`));
+      }, options.timeoutMs);
+    }
     child.stdout.on('data', (chunk) => { stdout += chunk; });
     child.stderr.on('data', (chunk) => { stderr += chunk; });
-    child.on('error', reject);
-    child.on('close', (exitCode) => resolve({ exitCode, stdout, stderr }));
+    child.on('error', (error) => {
+      if (timer) clearTimeout(timer);
+      reject(error);
+    });
+    child.on('close', (exitCode) => {
+      if (timer) clearTimeout(timer);
+      resolve({ exitCode, stdout, stderr });
+    });
   });
+}
+
+function parseJsonObject(value) {
+  const trimmed = String(value ?? '').trim();
+  if (!trimmed) return null;
+  try {
+    const parsed = JSON.parse(trimmed);
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : null;
+  } catch (error) {
+    throw new Error(`capture-helper snapshot returned non-JSON output: ${trimmed}`);
+  }
 }
 
 async function findWalletFixture(projectRoot) {
@@ -573,50 +490,14 @@ export class ExtensionPage extends CdpWebPage {
         ...metadata,
       };
       if (contextOrInput.node?.screenshot_mode === 'dom_raster' || process.env.METAMASK_RECIPE_EXTENSION_SCREENSHOT_MODE === 'dom-raster') {
-        return captureDomRasterFallback(
-          this,
-          contextOrInput.context,
-          relPath,
-          options,
-          new Error('Page.captureScreenshot skipped for requested DOM raster capture.'),
-        );
+        throw new Error('Extension ui.screenshot no longer supports DOM raster screenshots. Use capture-helper snapshot evidence.');
       }
-      try {
-        return await super.screenshot(contextOrInput.context, relPath, options);
-      } catch (error) {
-        if (!isCaptureScreenshotFailure(error)) throw error;
-        try {
-          return await captureDomRasterFallback(this, contextOrInput.context, relPath, options, error);
-        } catch (fallbackError) {
-          if (!isCaptureScreenshotFailure(fallbackError)) {
-            return captureMacScreenFallback(contextOrInput.context, relPath, options, fallbackError);
-          }
-          return captureMacScreenFallback(contextOrInput.context, relPath, options, error);
-        }
-      }
+      return captureHelperSnapshot(this, contextOrInput.context, relPath, options);
     }
     if (process.env.METAMASK_RECIPE_EXTENSION_SCREENSHOT_MODE === 'dom-raster') {
-      return captureDomRasterFallback(
-        this,
-        contextOrInput,
-        relPath,
-        metadata,
-        new Error('Page.captureScreenshot skipped for requested DOM raster capture.'),
-      );
+      throw new Error('Extension screenshots no longer support DOM raster mode. Use capture-helper snapshot evidence.');
     }
-    try {
-      return await super.screenshot(contextOrInput, relPath, metadata);
-    } catch (error) {
-      if (!isCaptureScreenshotFailure(error)) throw error;
-      try {
-        return await captureDomRasterFallback(this, contextOrInput, relPath, metadata, error);
-      } catch (fallbackError) {
-        if (!isCaptureScreenshotFailure(fallbackError)) {
-          return captureMacScreenFallback(contextOrInput, relPath, metadata, fallbackError);
-        }
-        return captureMacScreenFallback(contextOrInput, relPath, metadata, error);
-      }
-    }
+    return captureHelperSnapshot(this, contextOrInput, relPath, metadata);
   }
 }
 
