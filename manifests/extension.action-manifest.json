@@ -199,7 +199,7 @@
       ]
     },
     "ui.screenshot": {
-      "description": "Capture visual evidence through the platform adapter; the runner registers the screenshot artifact automatically.",
+      "description": "Capture visual evidence through capture-helper snapshot; the runner registers the screenshot artifact automatically. CDP/DOM-raster fallback is not valid Extension evidence.",
       "examples": [
         {
           "node": {
