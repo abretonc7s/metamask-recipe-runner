@@ -37,7 +37,6 @@ runner="$script_dir/metamask-recipe"
 runner_root="$(cd "$script_dir/.." && pwd -P)"
 bridge="$runner_root/live-adapters/mobile/bridge-runtime/cdp-bridge.cjs"
 setup_wallet_script="$runner_root/live-adapters/mobile/bridge-runtime/setup-wallet.sh"
-install_script="$runner_root/scripts/inject-mobile-harness.sh"
 
 find_mobile_root() {
   local dir="$(pwd -P)"
@@ -150,6 +149,55 @@ run_json_pretty() {
 }
 log() { printf 'mm-recipe: %s\n' "$*" >&2; }
 
+resolve_mobile_harness_script() {
+  local candidate dir
+
+  for candidate in \
+    "${FARMSLOT_RECIPE_HARNESS_SCRIPT:-}" \
+    "${RECIPE_HARNESS_SCRIPT:-}"; do
+    if [ -n "$candidate" ] && [ -x "$candidate" ]; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+  done
+
+  for dir in \
+    "$root/.agents/skills/mms-recipe-harness" \
+    "$root/.claude/skills/mms-recipe-harness" \
+    "$root/.cursor/rules/mms-recipe-harness"; do
+    [ -n "$dir" ] || continue
+    for candidate in "$dir/scripts/recipe-harness" "$dir/scripts/recipe-harness.sh"; do
+      if [ -x "$candidate" ]; then
+        printf '%s\n' "$candidate"
+        return 0
+      fi
+    done
+  done
+
+  return 1
+}
+
+install_mobile_harness() {
+  local harness_script
+  if harness_script="$(resolve_mobile_harness_script)"; then
+    log "Installing mobile recipe harness via ${harness_script}"
+    RECIPE_HARNESS_ROOT="${RECIPE_HARNESS_ROOT:-temp/recipe/harness}" "$harness_script" mobile install --target "$root"
+    return 0
+  fi
+
+  cat >&2 <<EOF
+mm-recipe: mobile recipe harness skill not found.
+
+Prepare requires the canonical recipe-harness skill install path; refusing to
+use the runner-private injector because that reintroduces harness drift.
+
+Set FARMSLOT_RECIPE_HARNESS_SCRIPT or RECIPE_HARNESS_SCRIPT to
+<recipe-harness>/scripts/recipe-harness, or install the mms-recipe-harness skill
+inside the target checkout.
+EOF
+  return 1
+}
+
 metro_ready() {
   curl -sf --max-time 2 "http://localhost:${WATCHER_PORT:-8081}/status" 2>/dev/null | grep -q 'packager-status:running'
 }
@@ -208,6 +256,31 @@ start_metro() {
   done
   tail -80 "$root/$metro_log" >&2 || true
   echo "mm-recipe: Metro did not become ready on port ${WATCHER_PORT}" >&2
+  return 1
+}
+
+bundle_url() {
+  local platform="$1"
+  printf 'http://localhost:%s/index.bundle?platform=%s&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.bytecode=1&transform.routerRoot=app&unstable_transformProfile=hermes-stable\n' \
+    "${WATCHER_PORT:-8081}" \
+    "$platform"
+}
+
+prewarm_bundle() {
+  local platform="$1"
+  local timeout="${MOBILE_BUNDLE_PREWARM_TIMEOUT:-600}"
+  local runtime_dir="${RECIPE_RUNTIME_DIR:-temp/recipe/runtime}"
+  local metro_log="$root/$runtime_dir/metro.log"
+  local url
+  [ "${MOBILE_BUNDLE_PREWARM:-1}" != "0" ] || return 0
+  url="$(bundle_url "$platform")"
+  log "Prewarming ${platform} bundle before launching dev client"
+  if curl -fL --connect-timeout 5 --max-time "$timeout" -o /dev/null "$url"; then
+    log "${platform} bundle ready"
+    return 0
+  fi
+  echo "mm-recipe: ${platform} bundle did not become ready before launch" >&2
+  tail -80 "$metro_log" >&2 || true
   return 1
 }
 
@@ -273,6 +346,7 @@ boot_simulator_if_needed() {
 
 launch_ios() {
   start_metro
+  prewarm_bundle ios
   local target url encoded bundle_id
   target="$(sim_target)"
   boot_simulator_if_needed "$target"
@@ -294,6 +368,7 @@ PY
 
 launch_android() {
   start_metro
+  prewarm_bundle android
   local serial_args=() package_id encoded url
   package_id="${ANDROID_PACKAGE_ID:-io.metamask}"
   if [ -n "${ADB_SERIAL:-${ANDROID_SERIAL:-${ANDROID_DEVICE:-}}}" ]; then
@@ -583,6 +658,27 @@ function bridgeStatus() {
 NODE
 }
 
+assert_runtime_ready() {
+  init_context
+  local status_json
+  status_json="$(runtime_status --target "$root" --port "${WATCHER_PORT:-}" --runtime-dir "${RECIPE_RUNTIME_DIR:-temp/recipe/runtime}" --json)"
+  if ! STATUS_JSON="$status_json" python3 -c 'import json, os, sys
+status = json.loads(os.environ["STATUS_JSON"])
+if status.get("ready"):
+    sys.exit(0)
+print(
+    "mm-recipe: runtime is not ready after prepare "
+    f"(reason={status.get('"'"'reason'"'"')}, metro={status.get('"'"'metro'"'"')}, "
+    f"debugTarget={status.get('"'"'debugTarget'"'"')}, bridge={status.get('"'"'bridge'"'"')})",
+    file=sys.stderr,
+)
+sys.exit(1)'
+  then
+    return 1
+  fi
+  log "Runtime ready after prepare"
+}
+
 prepare_mobile() {
   local target="" platform="${PLATFORM:-ios}" port="${WATCHER_PORT:-${METRO_PORT:-}}" simulator="" adb_serial="" wallet_setup=false runtime_dir="${RECIPE_RUNTIME_DIR:-temp/recipe/runtime}"
   while [ "$#" -gt 0 ]; do
@@ -609,7 +705,7 @@ prepare_mobile() {
     export ADB_SERIAL="$adb_serial" ANDROID_SERIAL="$adb_serial"
   fi
   init_context
-  "$install_script" --target "$root"
+  install_mobile_harness
   case "$platform" in
     ios) launch_ios ;;
     android) launch_android ;;
@@ -619,6 +715,7 @@ prepare_mobile() {
   if $wallet_setup; then
     setup_wallet
   fi
+  assert_runtime_ready
 }
 
 run_recipe() {

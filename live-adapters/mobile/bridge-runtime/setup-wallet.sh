@@ -39,8 +39,21 @@ WALLET_SETUP_SETTLE_TIMEOUT="${WALLET_SETUP_SETTLE_TIMEOUT:-180}"
 CDP="node $SCRIPTS/cdp-bridge.cjs"
 FIXTURE_PATH=""
 
-cdp_eval() { $CDP eval "$1" 2>/dev/null | jq -r '.'; }
-cdp_eval_async() { $CDP eval-async "$1" 2>/dev/null | jq -r '.'; }
+cdp_json_command() {
+  local mode="$1"
+  local expression="$2"
+  local output=""
+  if ! output=$($CDP "$mode" "$expression" 2>&1); then
+    echo "ERROR: CDP ${mode} failed: $output" >&2
+    return 1
+  fi
+  if ! printf '%s\n' "$output" | jq -r '.'; then
+    echo "ERROR: CDP ${mode} returned non-JSON output: $output" >&2
+    return 1
+  fi
+}
+cdp_eval() { cdp_json_command eval "$1"; }
+cdp_eval_async() { cdp_json_command eval-async "$1"; }
 
 # -- Parse args --
 while [[ $# -gt 0 ]]; do
@@ -204,6 +217,11 @@ wallet_state_ready() {
   [ "$(wallet_state_issue "$1")" = "ready" ]
 }
 
+PRECHECK_ACCOUNTS=$(read_wallet_state || true)
+if wallet_state_ready "$PRECHECK_ACCOUNTS"; then
+  echo "Wallet fixture already valid; skipping wallet mutation."
+else
+
 wait_for_wallet_state_after_eval_timeout() {
   local label="$1"
   local rc="$2"
@@ -296,6 +314,7 @@ else
     echo "$SETUP_RESULT" | jq -r '.accounts[]? | "  \(.name): \(.address)"'
   fi
   sleep 2
+fi
 fi
 
 # -- Ask the app to leave auth/onboarding after unlock.
