@@ -13,6 +13,7 @@
     "end",
     "ui.navigate",
     "ui.press",
+    "ui.key_press",
     "ui.set_input",
     "ui.scroll",
     "ui.wait_for",
@@ -375,6 +376,33 @@
             "selector": "[data-testid=multichain-account-list-search] input",
             "value": "Account",
             "intent": "Set text on an extension DOM input through the CDP UI transport"
+          }
+        }
+      ]
+    },
+    "ui.key_press": {
+      "description": "Send a trusted keyboard press to the currently focused UI element through the UI transport.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "next": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "key"
+        ],
+        "additionalProperties": true
+      },
+      "examples": [
+        {
+          "node": {
+            "action": "ui.key_press",
+            "key": "Enter",
+            "intent": "Send a trusted Enter key press to the focused UI element"
           }
         }
       ]
@@ -1615,6 +1643,10 @@
     },
     {
       "action": "ui.press",
+      "implementation": "@farmslot/recipe-harness/runtime/cdp"
+    },
+    {
+      "action": "ui.key_press",
       "implementation": "@farmslot/recipe-harness/runtime/cdp"
     },
     {

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.1.2 - 2026-06-10
+
+- Declare `ui.key_press` for Mobile and Extension recipe manifests so trusted keyboard input recipes validate against the runner action manifest.
+
 ## 0.1.1 - 2026-06-06
 
 - Harden harness setup so fallback installs are more reliable when the local skill installer is unavailable.
