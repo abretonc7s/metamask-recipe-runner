@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import process from 'node:process';
+import { recipeHarnessRoot } from './lib/recipe-paths.mjs';
 
 function usage() { console.error('Usage: cleanup-extension-harness.mjs [--target <metamask-extension>]'); }
 let target = process.cwd();
@@ -27,13 +28,7 @@ fs.rmSync(harnessDir, { recursive: true, force: true });
 console.log(`Cleaned extension recipe harness from ${target}`);
 
 function harnessRootValue() {
-  const value = process.env.RECIPE_HARNESS_ROOT || 'temp/recipe/harness';
-  if (!value || path.isAbsolute(value)) throw new Error(`RECIPE_HARNESS_ROOT must be a non-empty relative path: ${value}`);
-  if (!/^[A-Za-z0-9._/-]+$/u.test(value)) throw new Error(`RECIPE_HARNESS_ROOT contains unsupported characters: ${value}`);
-  for (const part of value.split('/')) {
-    if (!part || part === '.' || part === '..') throw new Error(`RECIPE_HARNESS_ROOT contains unsafe path component: ${value}`);
-  }
-  return value;
+  return recipeHarnessRoot();
 }
 
 function removeRecordedGitExcludeEntries(repo, recordFile) {

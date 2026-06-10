@@ -14,7 +14,7 @@ import { decideExtensionReadiness } from './extension-runtime-decision.ts';
 // runtime-decision (no --cdp-port) — would fail to load on a checkout without
 // local harness packages built. Keep this lazy.
 import { loadActionManifest, validateManifest } from './manifest.ts';
-import { assertAdapter, manifestPath, recipeHarnessPath, recipeHarnessRoot, recipePath, runnerDir } from './paths.ts';
+import { assertAdapter, manifestPath, recipeHarnessPath, recipeHarnessRoot, recipePath, recipeRuntimeDir, runnerDir } from './paths.ts';
 // runner.ts → adapters.ts → live-adapters/extension/platform/cdp.mjs does a
 // top-level harness import, so it is imported LAZILY inside
 // runRecipe only. Keeping it static would load the recipe harness for every
@@ -490,7 +490,7 @@ function classifyRuntimeLaunchFailure(text: string, cdpPort: number, target: str
 }
 
 function recipeRuntimeDirMessage(): string {
-  return process.env.RECIPE_RUNTIME_DIR || 'temp/recipe/runtime';
+  return recipeRuntimeDir();
 }
 
 function runtimeLaunchReport(status: 'pass' | 'fail', fields: Record<string, unknown>): Record<string, unknown> {

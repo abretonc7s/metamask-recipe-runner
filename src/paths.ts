@@ -12,15 +12,35 @@ import type {
 } from './types.ts';
 
 export const runnerDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-export const DEFAULT_RECIPE_RUNTIME_DIR = 'temp/recipe/runtime';
-export const DEFAULT_RECIPE_HARNESS_ROOT = 'temp/recipe/harness';
+const pathDefaults = readPathDefaults();
+export const DEFAULT_RECIPE_RUNTIME_DIR = pathDefaults.recipeRuntimeDir;
+export const DEFAULT_RECIPE_HARNESS_ROOT = pathDefaults.recipeHarnessRoot;
 
 export function recipeRuntimeDir() {
-  return process.env.RECIPE_RUNTIME_DIR || DEFAULT_RECIPE_RUNTIME_DIR;
+  return validateRelativeRecipePath('RECIPE_RUNTIME_DIR', process.env.RECIPE_RUNTIME_DIR || DEFAULT_RECIPE_RUNTIME_DIR);
 }
 
 export function recipeHarnessRoot() {
-  return process.env.RECIPE_HARNESS_ROOT || DEFAULT_RECIPE_HARNESS_ROOT;
+  return validateRelativeRecipePath('RECIPE_HARNESS_ROOT', process.env.RECIPE_HARNESS_ROOT || DEFAULT_RECIPE_HARNESS_ROOT);
+}
+
+
+function readPathDefaults(): { recipeRuntimeDir: string; recipeHarnessRoot: string } {
+  const defaultsPath = path.join(runnerDir, 'scripts/lib/path-defaults.json');
+  const parsed = JSON.parse(fs.readFileSync(defaultsPath, 'utf8')) as Partial<{ recipeRuntimeDir: string; recipeHarnessRoot: string }>;
+  return {
+    recipeRuntimeDir: validateRelativeRecipePath('recipeRuntimeDir', parsed.recipeRuntimeDir || ''),
+    recipeHarnessRoot: validateRelativeRecipePath('recipeHarnessRoot', parsed.recipeHarnessRoot || ''),
+  };
+}
+
+function validateRelativeRecipePath(name: string, value: string): string {
+  if (!value || path.isAbsolute(value)) throw new Error(`${name} must be a non-empty relative path: ${value}`);
+  if (!/^[A-Za-z0-9._/-]+$/u.test(value)) throw new Error(`${name} contains unsupported characters: ${value}`);
+  for (const part of value.split('/')) {
+    if (!part || part === '.' || part === '..') throw new Error(`${name} contains unsafe path component: ${value}`);
+  }
+  return value;
 }
 
 export function recipeRuntimePath(projectRoot: string, ...segments: string[]) {

@@ -61,7 +61,7 @@ EXTENSION_ID_FILE="$TARGET/$RUNTIME_DIR/extension.id"
 # Shared JSON reader: $SCRIPT_DIR/lib when running from the installed copy,
 # else the runner canonical at scripts/lib.
 # shellcheck disable=SC1091
-for _lib in "$SCRIPT_DIR/lib/json-field.sh" "$SCRIPT_DIR/../../../scripts/lib/json-field.sh"; do
+for _lib in "$SCRIPT_DIR/lib/json-field.sh" "$SCRIPT_DIR/../lib/json-field.sh" "$SCRIPT_DIR/../../../scripts/lib/json-field.sh"; do
   [ -f "$_lib" ] && { . "$_lib"; break; }
 done
 unset _lib
@@ -104,7 +104,8 @@ const fs = require('fs');
 const crypto = require('crypto');
 const path = require('path');
 const target = process.env.TARGET_FOR_FIXTURE;
-const runtimeDir = process.env.RECIPE_RUNTIME_DIR || 'temp/recipe/runtime';
+const runtimeDir = process.env.RECIPE_RUNTIME_DIR;
+if (!runtimeDir) throw new Error('RECIPE_RUNTIME_DIR is required');
 const candidates = [
   runtimeDir + '/wallet-fixture.json',
   'test/e2e/seeder/withFixtures.js',
@@ -385,7 +386,8 @@ function runGit(args) {
     return null;
   }
 }
-const harnessRootExclude = process.env.RECIPE_HARNESS_ROOT_EXCLUDE || 'temp/recipe/harness';
+const harnessRootExclude = process.env.RECIPE_HARNESS_ROOT_EXCLUDE;
+if (!harnessRootExclude) throw new Error('RECIPE_HARNESS_ROOT_EXCLUDE is required');
 const statusShort = runGit(['status', '--short', '--', '.', `:(exclude)${harnessRootExclude}`]);
 const gitStatus = {
   branch: runGit(['branch', '--show-current']),

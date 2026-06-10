@@ -11,12 +11,12 @@ copying runner logic.
 ## Public CLI
 
 ```bash
-metamask-recipe mobile prepare --target <metamask-mobile> --platform ios --port 8062 --simulator mm-2 --runtime-dir temp/recipe/runtime
+metamask-recipe mobile prepare --target <metamask-mobile> --platform ios --port 8062 --simulator mm-2 [--runtime-dir <runtime-dir>]
 metamask-recipe mobile runtime-status --target <metamask-mobile> --port 8062 --json
 metamask-recipe mobile status
 metamask-recipe mobile run <recipe.json> --artifacts-dir <dir>
 
-metamask-recipe extension prepare --target <metamask-extension> --cdp-port 6662 --runtime-dir temp/recipe/runtime
+metamask-recipe extension prepare --target <metamask-extension> --cdp-port 6662 [--runtime-dir <runtime-dir>]
 metamask-recipe extension runtime-status --target <metamask-extension> --cdp-port 6662 --json
 metamask-recipe extension decision --target <metamask-extension> --cdp-port 6662 --json
 metamask-recipe extension status --target <metamask-extension> --cdp-port 6662 --json
@@ -71,12 +71,12 @@ recipes/                       reusable smoke/action-validation recipes
 ```
 
 Both platforms use the same harness root convention:
-`temp/recipe/harness/<platform>/`. Injection writes a manifest, a runner delegate,
+the configured recipe harness root. Injection writes a manifest, a runner delegate,
 manifest/recipe snapshots, and a cleanup command.
 
 Both platforms also expose structured runtime state:
 `metamask-recipe <platform> runtime-status --json`. The command writes the same
-payload to `temp/recipe/runtime/runtime-status.json` so external hosts can poll
+payload to the configured runtime status path so external hosts can poll
 one JSON document instead of parsing terminal logs.
 
 Runtime file extensions are intentional, not arbitrary. Typed runner logic lives

@@ -22,6 +22,23 @@ function usage() {
   wallet-fixture-state.cjs seed-cdp --target <metamask-extension> --fixture <wallet-fixture.json> --state <fixture-state.json> --cdp-port <port> --extension-dir <runtime-dist> --extension-id-file <path> --out <report.json>`);
 }
 
+
+function pathDefault(key) {
+  for (const candidate of [
+    path.join(__dirname, 'lib/path-defaults.json'),
+    path.join(__dirname, '../lib/path-defaults.json'),
+  ]) {
+    if (!fs.existsSync(candidate)) continue;
+    const value = JSON.parse(fs.readFileSync(candidate, 'utf8'))[key];
+    if (value) return value;
+  }
+  throw new Error(`Missing path default: ${key}`);
+}
+
+function recipeRuntimeDir() {
+  return process.env.RECIPE_RUNTIME_DIR || pathDefault('recipeRuntimeDir');
+}
+
 function parseArgs(argv) {
   const [command, ...rest] = argv;
   const args = { command };
@@ -939,7 +956,7 @@ async function seedCdp(args) {
   const statePath = path.resolve(args.state);
   const extensionDir = path.resolve(args['extension-dir']);
   const extensionIdFile = args['extension-id-file'] ? path.resolve(args['extension-id-file']) : '';
-  const outPath = path.resolve(args.out || path.join(target, 'temp/recipe/runtime/fixture-state-validation.json'));
+  const outPath = path.resolve(args.out || path.join(target, recipeRuntimeDir(), 'fixture-state-validation.json'));
   const wallet = readJson(fixturePath);
   const fixtureState = readJson(statePath);
   const versionedState = versionedStorageState(fixtureState);

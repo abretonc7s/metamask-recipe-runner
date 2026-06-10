@@ -7,7 +7,7 @@
 #     --slot-id macwork-metamask-extension-5 \
 #     --repo /Users/deeeed/dev/metamask/metamask-extension-5 \
 #     --cdp-port 6665 \
-#     --runtime-dir temp/recipe/runtime
+#     --runtime-dir <runtime-dir>
 #
 # Requires: webpack watch running, valid build in dist/chrome.
 set -euo pipefail
@@ -33,9 +33,18 @@ done
 # --- Auto-detect from script location or CWD ---
 # Script lives at <repo>/<runtime_dir>/reopen-browser.sh
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck disable=SC1091
+for _hp in "$SCRIPT_DIR/lib/harness-path.sh" "$SCRIPT_DIR/../lib/harness-path.sh" "$SCRIPT_DIR/../../../scripts/lib/harness-path.sh"; do
+  [ -f "$_hp" ] && { . "$_hp"; break; }
+done
+unset _hp
+if ! command -v harness_root >/dev/null 2>&1; then
+  echo "reopen-browser: shared lib scripts/lib/harness-path.sh missing; reinstall the harness." >&2
+  exit 1
+fi
 if [[ -z "$RUNTIME_DIR" ]]; then
   # Infer runtime_dir as relative path from repo root
-  # Script is at <repo>/temp/recipe/runtime/reopen-browser.sh → runtime_dir = temp/recipe/runtime
+  # Script is at <repo>/<runtime-dir>/reopen-browser.sh, so runtime_dir is inferred from that relative path
   if [[ -f "$SCRIPT_DIR/browser.pid" || -f "$SCRIPT_DIR/webpack.pid" || -f "$SCRIPT_DIR/wallet-fixture.json" ]]; then
     AGENT_DIR_ABS="$SCRIPT_DIR"
   elif [[ -f "$PWD/browser.pid" || -f "$PWD/webpack.pid" ]]; then
@@ -57,7 +66,7 @@ if [[ -z "$RUNTIME_DIR" ]]; then
 fi
 
 [[ -z "$REPO" ]] && { echo "Error: cannot detect repo — pass --repo" >&2; exit 1; }
-RUNTIME_DIR="${RUNTIME_DIR:-temp/recipe/runtime}"
+RUNTIME_DIR="${RUNTIME_DIR:-$(recipe_runtime_dir)}"
 
 # Auto-detect slot-id from directory name (e.g. metamask-extension-6 → macwork-metamask-extension-6)
 if [[ -z "$SLOT_ID" ]]; then
@@ -83,8 +92,8 @@ fi
 WALLET_FIXTURE="${AGENT_DIR}/wallet-fixture.json"
 # Extension id resolution is delegated to the installed recipe-runner — the
 # single source of truth (deterministic id from the loaded dist's manifest key).
-# Honor the configured recipe harness root (default temp/recipe/harness).
-HARNESS_ROOT="${RECIPE_HARNESS_ROOT:-temp/recipe/harness}"
+# Honor the configured recipe harness root.
+HARNESS_ROOT="$(harness_root)"
 RUNNER_BIN="${REPO}/${HARNESS_ROOT}/extension/runner/bin/metamask-recipe"
 
 # --- Preflight checks ---

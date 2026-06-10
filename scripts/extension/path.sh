@@ -5,7 +5,7 @@
 # ($SCRIPT_DIR/lib) else the runner canonical scripts/lib.
 _harness_path_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck disable=SC1091
-for _hp in "$_harness_path_dir/lib/harness-path.sh" "$_harness_path_dir/../../../scripts/lib/harness-path.sh"; do
+for _hp in "$_harness_path_dir/lib/harness-path.sh" "$_harness_path_dir/../lib/harness-path.sh" "$_harness_path_dir/../../../scripts/lib/harness-path.sh"; do
   [ -f "$_hp" ] && { . "$_hp"; break; }
 done
 unset _hp _harness_path_dir

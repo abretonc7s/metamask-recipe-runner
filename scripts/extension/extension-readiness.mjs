@@ -1,12 +1,27 @@
 #!/usr/bin/env node
-'use strict';
+import fs from 'node:fs';
+import http from 'node:http';
+import path from 'node:path';
+import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
 
-const fs = require('fs');
-const http = require('http');
-const path = require('path');
+const require = createRequire(import.meta.url);
+const scriptDir = path.dirname(fileURLToPath(import.meta.url));
+
+function pathDefault(key) {
+  for (const candidate of [
+    path.join(scriptDir, 'lib/path-defaults.json'),
+    path.join(scriptDir, '../lib/path-defaults.json'),
+  ]) {
+    if (!fs.existsSync(candidate)) continue;
+    const value = JSON.parse(fs.readFileSync(candidate, 'utf8'))[key];
+    if (value) return value;
+  }
+  throw new Error(`Missing path default: ${key}`);
+}
 
 function recipeRuntimeDir() {
-  return process.env.RECIPE_RUNTIME_DIR || 'temp/recipe/runtime';
+  return process.env.RECIPE_RUNTIME_DIR || pathDefault('recipeRuntimeDir');
 }
 
 function parseArgs(argv) {

@@ -86,9 +86,10 @@ install_v1_runner_assets() {
   # refuse_symlink_destination walks every path component, so the deepest paths
   # also guard their parents ($HARNESS_REL covers the root segments).
   refuse_symlink_destination "$HARNESS_REL/runner"
+  refuse_symlink_destination "$HARNESS_REL/scripts"
   refuse_symlink_destination "$HARNESS_REL/action-manifest.json"
   mkdir -p "$HARNESS_DIR"
-  rm -rf "$HARNESS_DIR/runner"
+  rm -rf "$HARNESS_DIR/runner" "$HARNESS_DIR/scripts"
   mkdir -p "$HARNESS_DIR/runner/bin" "$HARNESS_DIR/runner/manifests" "$HARNESS_DIR/runner/recipes"
 
   # Mobile Metro/Watchman observes the product checkout. Copying the full
@@ -155,6 +156,15 @@ install_v1_runner_assets() {
   cp "$METAMASK_RUNNER_DIR/manifests/extension.action-manifest.json" "$HARNESS_DIR/runner/manifests/extension.action-manifest.json"
   if [ -d "$METAMASK_RUNNER_DIR/recipes" ]; then
     rsync -a --delete "$METAMASK_RUNNER_DIR/recipes/" "$HARNESS_DIR/runner/recipes/"
+  fi
+  if [ -d "$METAMASK_RUNNER_DIR/scripts/mobile" ]; then
+    rsync -a --delete "$METAMASK_RUNNER_DIR/scripts/mobile/" "$HARNESS_DIR/scripts/"
+    mkdir -p "$HARNESS_DIR/scripts/lib"
+    cp "$METAMASK_RUNNER_DIR/scripts/lib/harness-path.sh" "$HARNESS_DIR/scripts/lib/harness-path.sh"
+    cp "$METAMASK_RUNNER_DIR/scripts/lib/path-defaults.json" "$HARNESS_DIR/scripts/lib/path-defaults.json"
+    cp "$METAMASK_RUNNER_DIR/scripts/lib/recipe-paths.mjs" "$HARNESS_DIR/scripts/lib/recipe-paths.mjs"
+    chmod -R u+rwX,go+rX "$HARNESS_DIR/scripts"
+    find "$HARNESS_DIR/scripts" -type f \( -name '*.sh' -o -name '*.cjs' -o -name '*.mjs' \) -exec chmod +x {} +
   fi
   if [ ! -x "$HARNESS_DIR/runner/bin/metamask-recipe" ]; then
     echo "Refusing mobile recipe harness install: failed to make runner executable." >&2
@@ -234,8 +244,13 @@ if [ "$FORCE_OVERLAY" = false ] && has_product_owned_mobile_harness; then
       protocolVersion: "v1",
       actionManifestPath: harnessRel + "/action-manifest.json",
       runnerEntrypoint: harnessRel + "/runner/bin/metamask-recipe",
+      runtimeHelpers: {
+        launch: harnessRel + "/scripts/launch.sh",
+        live: harnessRel + "/scripts/live.sh",
+        verify: harnessRel + "/scripts/verify.sh"
+      },
       installedPaths: [],
-      harnessInstalledPaths: [harnessRel + "/runner", harnessRel + "/action-manifest.json"],
+      harnessInstalledPaths: [harnessRel + "/runner", harnessRel + "/scripts", harnessRel + "/action-manifest.json"],
       patchedFiles: [],
       productOwnedPaths: [
         "app/core/AgenticService",
@@ -577,7 +592,12 @@ node -e '
     protocolVersion: "v1",
     actionManifestPath: harnessRel + "/action-manifest.json",
     runnerEntrypoint: harnessRel + "/runner/bin/metamask-recipe",
-    installedPaths: [harnessRel + "/runner", harnessRel + "/action-manifest.json", "app/core/AgenticService"],
+    runtimeHelpers: {
+      launch: harnessRel + "/scripts/launch.sh",
+      live: harnessRel + "/scripts/live.sh",
+      verify: harnessRel + "/scripts/verify.sh"
+    },
+    installedPaths: [harnessRel + "/runner", harnessRel + "/scripts", harnessRel + "/action-manifest.json", "app/core/AgenticService"],
     patchedFiles: ["app/core/NavigationService/NavigationService.ts", "app/components/Nav/App/App.tsx"],
     backupDir,
     managedHashes: backupDir + "/managed-hashes.tsv",

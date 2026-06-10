@@ -6,10 +6,10 @@ readiness decisions, extension-id resolution, and live CDP health checks.
 ## Prepare
 
 ```bash
-metamask-recipe extension prepare --target <repo> [--cdp-port <port>] [--runtime-dir temp/recipe/runtime]
+metamask-recipe extension prepare --target <repo> [--cdp-port <port>] [--runtime-dir <runtime-dir>]
 ```
 
-Installs the Extension harness under `temp/recipe/harness/extension/`. With
+Installs the Extension harness under the configured recipe harness root. With
 `--cdp-port`, it also runs a live health probe.
 
 ## Runtime status
@@ -19,7 +19,7 @@ metamask-recipe extension runtime-status --target <repo> [--cdp-port <port>] [--
 ```
 
 Writes a structured status payload to stdout and
-`temp/recipe/runtime/runtime-status.json`. Hosts should poll this JSON instead
+the configured runtime status JSON. Hosts should poll this JSON instead
 of parsing logs. The payload includes fixture presence and the resolved fixture
 path so hosts can surface missing setup before launching Chrome.
 

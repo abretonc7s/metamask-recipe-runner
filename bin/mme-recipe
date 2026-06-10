@@ -30,6 +30,8 @@ EOF
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 runner="$script_dir/metamask-recipe"
 runner_root="$(cd "$script_dir/.." && pwd -P)"
+# shellcheck disable=SC1091
+. "$runner_root/scripts/lib/harness-path.sh"
 install_script="$runner_root/scripts/inject-extension-harness.mjs"
 
 find_extension_root() {
@@ -83,8 +85,9 @@ infer_slot_number() {
 
 init_context() {
   root="$(find_extension_root)" || { echo "mme-recipe: run from a metamask-extension checkout" >&2; exit 2; }
-  runtime_dir="${RECIPE_RUNTIME_DIR:-temp/recipe/runtime}"
-  harness_root="${RECIPE_HARNESS_ROOT:-temp/recipe/harness}"
+  runtime_dir="$(recipe_runtime_dir)"
+  harness_root="$(harness_root)"
+  export RECIPE_RUNTIME_DIR="$runtime_dir" RECIPE_HARNESS_ROOT="$harness_root"
   runtime_json="$root/$runtime_dir/recipe-runtime.json"
   [ -f "$runtime_json" ] || runtime_json="$root/$runtime_dir/agentic-runtime.json"
   load_env_file "$root/$runtime_dir/recipe-runtime.env"
@@ -167,7 +170,7 @@ log() { printf 'mme-recipe: %s\n' "$*" >&2; }
 need_cdp() { [ -n "${CDP_PORT:-}" ] || { echo "mme-recipe: CDP_PORT not found" >&2; exit 2; }; }
 
 prepare_extension() {
-  local target="" cdp_port="${CDP_PORT:-${RECIPE_CDP_PORT:-}}" runtime_dir="${RECIPE_RUNTIME_DIR:-temp/recipe/runtime}" validate=false
+  local target="" cdp_port="${CDP_PORT:-${RECIPE_CDP_PORT:-}}" runtime_dir="$(recipe_runtime_dir)" validate=false
   while [ "$#" -gt 0 ]; do
     case "$1" in
       --target) target="$2"; shift 2 ;;

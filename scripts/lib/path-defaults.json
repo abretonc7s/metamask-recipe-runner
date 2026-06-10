@@ -1,0 +1,4 @@
+{
+  "recipeHarnessRoot": "temp/recipe/harness",
+  "recipeRuntimeDir": "temp/recipe/runtime"
+}

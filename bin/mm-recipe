@@ -35,6 +35,8 @@ EOF
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 runner="$script_dir/metamask-recipe"
 runner_root="$(cd "$script_dir/.." && pwd -P)"
+# shellcheck disable=SC1091
+. "$runner_root/scripts/lib/harness-path.sh"
 bridge="$runner_root/live-adapters/mobile/bridge-runtime/cdp-bridge.cjs"
 setup_wallet_script="$runner_root/live-adapters/mobile/bridge-runtime/setup-wallet.sh"
 
@@ -84,7 +86,9 @@ init_context() {
     [ -n "${IOS_SIMULATOR:-}" ] || export IOS_SIMULATOR="mm-$slot"
   fi
   [ -n "${CDP_PORT:-}" ] || export CDP_PORT="${WATCHER_PORT:-}"
-  mkdir -p "$root/${RECIPE_RUNTIME_DIR:-temp/recipe/runtime}" "$root/temp/recipe-artifacts"
+  runtime_dir="$(recipe_runtime_dir)"
+  export RECIPE_RUNTIME_DIR="$runtime_dir"
+  mkdir -p "$root/$runtime_dir" "$root/temp/recipe-artifacts"
 }
 
 
@@ -181,7 +185,7 @@ install_mobile_harness() {
   local harness_script
   if harness_script="$(resolve_mobile_harness_script)"; then
     log "Installing mobile recipe harness via ${harness_script}"
-    RECIPE_HARNESS_ROOT="${RECIPE_HARNESS_ROOT:-temp/recipe/harness}" "$harness_script" mobile install --target "$root"
+    RECIPE_HARNESS_ROOT="$(harness_root)" "$harness_script" mobile install --target "$root"
     return 0
   fi
 
@@ -280,7 +284,7 @@ start_metro() {
   fi
   clear_stale_metro_listener
   local metro_workers="${METRO_MAX_WORKERS:-$(default_metro_workers)}"
-  local runtime_dir="${RECIPE_RUNTIME_DIR:-temp/recipe/runtime}"
+  local runtime_dir="$(recipe_runtime_dir)"
   local metro_log="$runtime_dir/metro.log"
   local metro_pid="$runtime_dir/metro.pid"
   log "Starting Metro on port ${WATCHER_PORT} (METRO_MAX_WORKERS=${metro_workers})"
@@ -312,7 +316,7 @@ bundle_url() {
 prewarm_bundle() {
   local platform="$1"
   local timeout="${MOBILE_BUNDLE_PREWARM_TIMEOUT:-900}"
-  local runtime_dir="${RECIPE_RUNTIME_DIR:-temp/recipe/runtime}"
+  local runtime_dir="$(recipe_runtime_dir)"
   local metro_log="$root/$runtime_dir/metro.log"
   local url bundle_pid elapsed=0 last_progress=""
   [ "${MOBILE_BUNDLE_PREWARM:-1}" != "0" ] || { log "Skipping ${platform} bundle prewarm (MOBILE_BUNDLE_PREWARM=0)"; return 0; }
@@ -466,7 +470,8 @@ fixture_password() {
 const fs = require('fs');
 const path = require('path');
 const root = process.argv[2];
-const runtimeDir = process.env.RECIPE_RUNTIME_DIR || 'temp/recipe/runtime';
+const runtimeDir = process.env.RECIPE_RUNTIME_DIR;
+if (!runtimeDir) throw new Error('RECIPE_RUNTIME_DIR is required');
 for (const rel of [`${runtimeDir}/wallet-fixture.json`]) {
   try {
     const data = JSON.parse(fs.readFileSync(path.join(root, rel), 'utf8'));
@@ -479,7 +484,7 @@ NODE
 
 setup_wallet() {
   init_context
-  local fixture="${1:-${RECIPE_RUNTIME_DIR:-temp/recipe/runtime}/wallet-fixture.json}"
+  local fixture="${1:-$(recipe_runtime_dir)/wallet-fixture.json}"
   (cd "$root" && APP_ROOT="$root" "$setup_wallet_script" --fixture "$fixture")
 }
 
@@ -499,9 +504,9 @@ screenshot() {
 
 tail_logs() {
   init_context
-  local log_file="$root/${RECIPE_RUNTIME_DIR:-temp/recipe/runtime}/metro.log"
-  [ -f "$log_file" ] || { echo "mm-recipe: Metro log missing: ${RECIPE_RUNTIME_DIR:-temp/recipe/runtime}/metro.log. Start with: recipe ios|android" >&2; return 1; }
-  log "tailing ${RECIPE_RUNTIME_DIR:-temp/recipe/runtime}/metro.log (Ctrl-C to stop)"
+  local log_file="$root/$(recipe_runtime_dir)/metro.log"
+  [ -f "$log_file" ] || { echo "mm-recipe: Metro log missing: $(recipe_runtime_dir)/metro.log. Start with: recipe ios|android" >&2; return 1; }
+  log "tailing $(recipe_runtime_dir)/metro.log (Ctrl-C to stop)"
   tail -f "$log_file"
 }
 
@@ -516,7 +521,7 @@ refresh_mobile() {
 stop_metro() {
   init_context
   local pids=""
-  local metro_pid="$root/${RECIPE_RUNTIME_DIR:-temp/recipe/runtime}/metro.pid"
+  local metro_pid="$root/$(recipe_runtime_dir)/metro.pid"
   local marker=""
   [ -f "$metro_pid" ] && marker="$(cat "$metro_pid" 2>/dev/null || true)"
   case "$marker" in
@@ -543,8 +548,8 @@ stop_metro() {
 
 wait_for_bridge() {
   init_context
-  local log_file="$root/${RECIPE_RUNTIME_DIR:-temp/recipe/runtime}/bridge-status.log"
-  local metro_log="$root/${RECIPE_RUNTIME_DIR:-temp/recipe/runtime}/metro.log"
+  local log_file="$root/$(recipe_runtime_dir)/bridge-status.log"
+  local metro_log="$root/$(recipe_runtime_dir)/metro.log"
   mkdir -p "$(dirname "$log_file")"
   local attempt max_polls
   max_polls="${MOBILE_BRIDGE_READY_POLLS:-90}"
@@ -619,7 +624,7 @@ runtime_status() {
   [ -n "$runtime_dir_arg" ] && export RECIPE_RUNTIME_DIR="$runtime_dir_arg"
   [ -n "$port" ] && export WATCHER_PORT="$port" CDP_PORT="${CDP_PORT:-$port}"
   init_context
-  local runtime_dir="${RECIPE_RUNTIME_DIR:-temp/recipe/runtime}"
+  local runtime_dir="$(recipe_runtime_dir)"
   local runtime_abs="$root/$runtime_dir"
   local status_file="$runtime_abs/runtime-status.json"
   local metro_log="$runtime_abs/metro.log"
@@ -729,7 +734,7 @@ NODE
 assert_runtime_ready() {
   init_context
   local status_json
-  status_json="$(runtime_status --target "$root" --port "${WATCHER_PORT:-}" --runtime-dir "${RECIPE_RUNTIME_DIR:-temp/recipe/runtime}" --json)"
+  status_json="$(runtime_status --target "$root" --port "${WATCHER_PORT:-}" --runtime-dir "$(recipe_runtime_dir)" --json)"
   if ! STATUS_JSON="$status_json" python3 -c 'import json, os, sys
 status = json.loads(os.environ["STATUS_JSON"])
 if status.get("ready"):
@@ -748,7 +753,7 @@ sys.exit(1)'
 }
 
 prepare_mobile() {
-  local target="" platform="${PLATFORM:-ios}" port="${WATCHER_PORT:-${METRO_PORT:-}}" simulator="" adb_serial="" wallet_setup=false runtime_dir="${RECIPE_RUNTIME_DIR:-temp/recipe/runtime}"
+  local target="" platform="${PLATFORM:-ios}" port="${WATCHER_PORT:-${METRO_PORT:-}}" simulator="" adb_serial="" wallet_setup=false runtime_dir="$(recipe_runtime_dir)"
   while [ "$#" -gt 0 ]; do
     case "$1" in
       --target) target="$2"; shift 2 ;;
@@ -838,7 +843,7 @@ case "$cmd" in
   navigate) bridge_cmd navigate "$@" ;;
   back|go-back) bridge_cmd go-back ;;
   unlock) bridge_cmd unlock "${1:-$(fixture_password)}" ;;
-  setup-wallet|wallet-setup) setup_wallet "${1:-${RECIPE_RUNTIME_DIR:-temp/recipe/runtime}/wallet-fixture.json}" ;;
+  setup-wallet|wallet-setup) setup_wallet "${1:-$(recipe_runtime_dir)/wallet-fixture.json}" ;;
   accounts|list-accounts) bridge_cmd list-accounts | pipe_pretty ;;
   select-account|switch-account) bridge_cmd switch-account "${1:?address required}" ;;
   screenshot) screenshot "${1:-}" ;;
