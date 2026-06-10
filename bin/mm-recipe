@@ -198,6 +198,37 @@ EOF
   return 1
 }
 
+mobile_harness_patched() {
+  [ -f "$root/app/core/AgenticService/AgenticService.ts" ] \
+    && grep -q "AgenticService.install" "$root/app/core/NavigationService/NavigationService.ts" 2>/dev/null \
+    && grep -q "AgentStepHud" "$root/app/components/Nav/App/App.tsx" 2>/dev/null
+}
+
+ensure_mobile_harness_patched() {
+  init_context
+  if mobile_harness_patched; then
+    return 0
+  fi
+
+  local had_metro=false
+  if metro_ready; then
+    had_metro=true
+  fi
+
+  log "Mobile recipe harness patches missing or stale; reinstalling before launch"
+  install_mobile_harness
+
+  if ! mobile_harness_patched; then
+    echo "mm-recipe: mobile recipe harness install completed but required patch markers are still missing" >&2
+    return 1
+  fi
+
+  if [ "$had_metro" = true ]; then
+    log "Restarting Metro so the rebuilt graph includes the refreshed harness patches"
+    stop_metro
+  fi
+}
+
 metro_ready() {
   curl -sf --max-time 2 "http://localhost:${WATCHER_PORT:-8081}/status" 2>/dev/null | grep -q 'packager-status:running'
 }
@@ -229,6 +260,18 @@ start_metro_tmux_window() {
   log "Started Metro in tmux window ${session}:${window}"
 }
 
+default_metro_workers() {
+  if command -v sysctl >/dev/null 2>&1; then
+    local cores
+    cores="$(sysctl -n hw.perflevel0.physicalcpu 2>/dev/null || sysctl -n hw.physicalcpu 2>/dev/null || true)"
+    if [[ "$cores" =~ ^[0-9]+$ ]] && [ "$cores" -gt 0 ]; then
+      if [ "$cores" -gt 6 ]; then printf '6\n'; else printf '%s\n' "$cores"; fi
+      return 0
+    fi
+  fi
+  printf '4\n'
+}
+
 start_metro() {
   init_context
   if metro_ready; then
@@ -236,7 +279,7 @@ start_metro() {
     return 0
   fi
   clear_stale_metro_listener
-  local metro_workers="${METRO_MAX_WORKERS:-2}"
+  local metro_workers="${METRO_MAX_WORKERS:-$(default_metro_workers)}"
   local runtime_dir="${RECIPE_RUNTIME_DIR:-temp/recipe/runtime}"
   local metro_log="$runtime_dir/metro.log"
   local metro_pid="$runtime_dir/metro.pid"
@@ -268,14 +311,37 @@ bundle_url() {
 
 prewarm_bundle() {
   local platform="$1"
-  local timeout="${MOBILE_BUNDLE_PREWARM_TIMEOUT:-600}"
+  local timeout="${MOBILE_BUNDLE_PREWARM_TIMEOUT:-900}"
   local runtime_dir="${RECIPE_RUNTIME_DIR:-temp/recipe/runtime}"
   local metro_log="$root/$runtime_dir/metro.log"
-  local url
-  [ "${MOBILE_BUNDLE_PREWARM:-1}" != "0" ] || return 0
+  local url bundle_pid elapsed=0 last_progress=""
+  [ "${MOBILE_BUNDLE_PREWARM:-1}" != "0" ] || { log "Skipping ${platform} bundle prewarm (MOBILE_BUNDLE_PREWARM=0)"; return 0; }
   url="$(bundle_url "$platform")"
-  log "Prewarming ${platform} bundle before launching dev client"
-  if curl -fL --connect-timeout 5 --max-time "$timeout" -o /dev/null "$url"; then
+  log "Prewarming ${platform} bundle before launching dev client (set MOBILE_BUNDLE_PREWARM=0 to skip)"
+  curl -sfL --connect-timeout 5 --max-time "$timeout" -o /dev/null "$url" &
+  bundle_pid=$!
+  while kill -0 "$bundle_pid" 2>/dev/null; do
+    local progress=""
+    if [ -f "$metro_log" ]; then
+      progress="$(grep -E "^[[:space:]]*(iOS|Android).*index\\.(js|tsx?).*%|Bundl(ed|ing)|Finished" "$metro_log" | tail -1 | tr -d '\r' || true)"
+    fi
+    if [ -n "$progress" ] && [ "$progress" != "$last_progress" ]; then
+      log "Bundle progress: $progress"
+      last_progress="$progress"
+    elif [ $((elapsed % 30)) -eq 0 ]; then
+      log "Waiting for ${platform} bundle (${elapsed}s/${timeout}s)${last_progress:+ — $last_progress}"
+    fi
+    if [ "$elapsed" -ge "$timeout" ]; then
+      kill "$bundle_pid" 2>/dev/null || true
+      wait "$bundle_pid" 2>/dev/null || true
+      echo "mm-recipe: ${platform} bundle did not become ready before launch timeout (${timeout}s)" >&2
+      tail -80 "$metro_log" >&2 || true
+      return 1
+    fi
+    sleep 3
+    elapsed=$((elapsed + 3))
+  done
+  if wait "$bundle_pid"; then
     log "${platform} bundle ready"
     return 0
   fi
@@ -345,6 +411,7 @@ boot_simulator_if_needed() {
 }
 
 launch_ios() {
+  ensure_mobile_harness_patched
   start_metro
   prewarm_bundle ios
   local target url encoded bundle_id
@@ -367,6 +434,7 @@ PY
 }
 
 launch_android() {
+  ensure_mobile_harness_patched
   start_metro
   prewarm_bundle android
   local serial_args=() package_id encoded url
@@ -719,7 +787,7 @@ prepare_mobile() {
 }
 
 run_recipe() {
-  init_context
+  ensure_mobile_harness_patched
   local recipe="$1"; shift
   [ -f "$recipe" ] || { echo "mm-recipe: recipe not found: $recipe" >&2; exit 2; }
   local out="$root/temp/recipe-artifacts/$(basename "$recipe" .json)-$(date -u +%Y%m%dT%H%M%SZ)"
