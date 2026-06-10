@@ -1,12 +1,17 @@
 # MetaMask Recipe Runner
 
-MetaMask-specific runner for Recipe Protocol v1. Protocol reference:
-https://farmslot.io/docs/reference/recipe-protocol-v1.
+MetaMask-specific runner for Recipe Protocol v1. This package owns the reusable
+MetaMask recipe surface: manifests, Mobile and Extension live adapters, harness
+injection, runtime checks, and the public `metamask-recipe` CLI.
 
-This package owns the reusable MetaMask recipe surface: manifests, Mobile and
-Extension live adapters, harness injection, runtime checks, and the public
-`metamask-recipe` CLI. Hosts and thin wrappers should invoke this CLI instead of
-copying runner logic.
+You can use this runner directly from a MetaMask Mobile or Extension checkout; no
+slot farm is required. Farm/slot orchestration is only a way to scale the same
+loop across many checkouts. External tools should resolve this package and invoke
+its CLI instead of copying runner logic.
+
+Start with [Architecture](docs/architecture.md) if you need to understand how the
+CLI, injected harness, HUD, Mobile bridge, Extension CDP runtime, and Recipe v1
+packages fit together.
 
 ## Public CLI
 
@@ -38,46 +43,46 @@ metamask-recipe ensure-ready --adapter extension --target <repo> --cdp-port <por
 metamask-recipe run <recipe.json> --adapter <mobile|extension> --project-root <repo> --artifacts-dir <dir> --json
 ```
 
+## Two parts of this repo
+
+This repo deliberately contains two separate concerns:
+
+1. **Recipe capability/execution** — manifests, reusable recipes, typed runner
+   binding, and Mobile/Extension live adapters. This answers “what actions can a
+   recipe call and how is proof produced?”
+2. **Runtime lifecycle / sandbox helpers** — harness install/cleanup,
+   Metro/iOS/Android launch, bundle prewarm, isolated Chrome/CDP launch, Extension
+   full-screen or popup-style presentation, build freshness, fixture/profile
+   setup, and runtime health checks. This answers “how do I give the agent a
+   reproducible local app session?”
+
+Keep changes on the right side of that boundary. Shell scripts should prepare an
+isolated sandbox runtime, not define recipe semantics. Recipe adapters should
+prove MetaMask behavior, not start Metro or Chrome.
+
+Long term, app clients should expose their own debug automation surface. The
+runner's injected harness exists so recipes can still run on older app versions, historical branches, and eval/replay runs that do not have that surface built in.
+
 ## Layout
 
+The short version is below; the detailed ownership map is in
+[Architecture](docs/architecture.md).
+
 ```text
-bin/
-  metamask-recipe              public CLI wrapper
-  mm-recipe                    Mobile convenience/runtime commands
-  mme-recipe                   Extension convenience/runtime commands
-
-scripts/
-  inject-mobile-harness.sh
-  cleanup-mobile-harness.sh
-  inject-extension-harness.mjs
-  cleanup-extension-harness.mjs
-  extension/                    Extension runtime helper scripts installed into the harness
-  validate-action-e2e-artifacts.mjs
-  lib/                         shared path/hash helpers
-
-src/
-  cli.ts                       typed Recipe Protocol CLI
-  runner.ts                    adapter registration over the shared recipe harness
-  adapters.ts                  manifest action bindings
-  extension-*.ts               Extension runtime decision/readiness logic
-  doctor.ts                    static/runtime diagnostics
-
-live-adapters/
-  mobile/                      React Native bridge + Mobile action implementations
-  extension/                   CDP/browser-extension action implementations
-
-manifests/                     executable action manifests
-recipes/                       reusable smoke/action-validation recipes
+bin/                         public CLI and platform convenience commands
+src/                         typed runner core, manifest loading, runtime decisions
+live-adapters/               Mobile/Extension action implementations
+scripts/                     harness install/cleanup and platform runtime helpers
+scripts/lib/path-defaults.json single source for default runtime/harness paths
+manifests/                   executable action manifests
+recipes/                     reusable smoke/action-validation recipes
+docs/                        architecture and contracts
 ```
 
-Both platforms use the same harness root convention:
-the configured recipe harness root. Injection writes a manifest, a runner delegate,
-manifest/recipe snapshots, and a cleanup command.
-
-Both platforms also expose structured runtime state:
-`metamask-recipe <platform> runtime-status --json`. The command writes the same
-payload to the configured runtime status path so external hosts can poll
-one JSON document instead of parsing terminal logs.
+Both platforms install ignored runtime helpers under the configured recipe
+harness root and write runtime state under the configured recipe runtime dir. The
+defaults live in `scripts/lib/path-defaults.json`; use `RECIPE_HARNESS_ROOT` and
+`RECIPE_RUNTIME_DIR` only as relative-path overrides.
 
 Runtime file extensions are intentional, not arbitrary. Typed runner logic lives
 in `src/**/*.ts`; direct no-build adapters/helpers use `.mjs`; `.cjs` is reserved
@@ -109,8 +114,9 @@ one clear current action while trace files retain full detail.
 
 ## Local protocol co-development
 
-Normal installs use package dependencies: `@farmslot/protocol` and
-`@farmslot/recipe-harness`. For local protocol/runtime package development only:
+Normal installs use the package dependencies declared in `package.json` for the
+Recipe v1 protocol and harness runtime. For local protocol/runtime package
+development only:
 
 ```bash
 FARMSLOT_ROOT=/path/to/protocol-checkout npm run dev:link-farmslot
@@ -122,10 +128,10 @@ Do not commit local TypeScript path shims.
 
 ```bash
 yarn check
-bash -n bin/metamask-recipe bin/mm-recipe scripts/inject-mobile-harness.sh scripts/cleanup-mobile-harness.sh
-node --check scripts/inject-extension-harness.mjs
-node --check scripts/cleanup-extension-harness.mjs
-node --check scripts/extension/launch-chrome-detached.cjs
+bash -n bin/metamask-recipe bin/mm-recipe bin/mme-recipe scripts/*.sh scripts/mobile/*.sh scripts/extension/*.sh
+node --check scripts/inject-extension-harness.mjs scripts/cleanup-extension-harness.mjs \
+  scripts/extension/extension-readiness.mjs scripts/extension/launch-chrome-detached.cjs \
+  scripts/lib/recipe-paths.mjs scripts/check.mjs
 ```
 
 For live validation, run platform `prepare`, run a smoke/action-validation recipe,
