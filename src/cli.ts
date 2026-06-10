@@ -15,6 +15,7 @@ import { decideExtensionReadiness } from './extension-runtime-decision.ts';
 // local harness packages built. Keep this lazy.
 import { loadActionManifest, validateManifest } from './manifest.ts';
 import { assertAdapter, manifestPath, recipeHarnessPath, recipeHarnessRoot, recipePath, runnerDir } from './paths.ts';
+import { startRecipeRecording, stopRecipeRecording } from './run-recording.ts';
 // runner.ts → adapters.ts → live-adapters/extension/platform/cdp.mjs does a
 // top-level harness import, so it is imported LAZILY inside
 // runRecipe only. Keeping it static would load the recipe harness for every
@@ -38,6 +39,7 @@ interface RuntimeOptions {
   skipExtensionRuntimePrepare?: boolean;
   slot?: string;
   validationRuntimeDir?: string;
+  record?: boolean;
 }
 
 const COMMANDS: Record<string, (args: ParsedArgs) => Promise<number>> = {
@@ -63,7 +65,7 @@ function usage() {
   metamask-recipe runtime-launch --adapter extension --target <repo> --cdp-port <port> [--start-watch] [--chrome-user-data-dir <dir>] [--artifacts-dir <dir>] [--json]
   metamask-recipe resolve-extension --adapter extension --target <repo> [--cdp-port <port>] [--json]
   metamask-recipe ensure-ready --adapter extension --target <repo> --cdp-port <port> [--json]
-  metamask-recipe run <recipe.json> --adapter <mobile|extension> --artifacts-dir <dir> [--project-root <repo>] [--action-manifest <path>] [--cdp-port <port>] [--slot <slot-id>] [--launch-existing-dist] [--json]
+  metamask-recipe run <recipe.json> --adapter <mobile|extension> --artifacts-dir <dir> [--project-root <repo>] [--action-manifest <path>] [--cdp-port <port>] [--slot <slot-id>] [--launch-existing-dist] [--record] [--json]
   metamask-recipe self-test [--artifacts-dir <dir>] [--json]
 `);
 }
@@ -153,16 +155,24 @@ async function runRecipe(
   }
   try {
     await prepareRuntimeIfNeeded(adapter, projectRoot, runtimeOptions);
-    const manifest = loadActionManifest(adapter, actionManifestPath);
-    await validateManifest(manifest);
-    const { createMetaMaskRunner } = await import('./runner.ts');
-    const runner = await createMetaMaskRunner(adapter, manifest);
-    return await runner.run({
-      recipePath: path.resolve(recipe),
-      artifactsDir: path.resolve(artifactsDir),
-      projectRoot,
-      env: recipeRunEnv(adapter),
-    });
+    const absoluteArtifactsDir = path.resolve(artifactsDir);
+    const recording = await startRecipeRecording(adapter, projectRoot, absoluteArtifactsDir, runtimeOptions);
+    try {
+      const manifest = loadActionManifest(adapter, actionManifestPath);
+      await validateManifest(manifest);
+      const { createMetaMaskRunner } = await import('./runner.ts');
+      const runner = await createMetaMaskRunner(adapter, manifest);
+      const result = await runner.run({
+        recipePath: path.resolve(recipe),
+        artifactsDir: absoluteArtifactsDir,
+        projectRoot,
+        env: recipeRunEnv(adapter),
+      });
+      await stopRecipeRecording(recording, result);
+      return result;
+    } finally {
+      await stopRecipeRecording(recording);
+    }
   } finally {
     restoreEnv('CDP_PORT', previousCdpPort);
     restoreEnv('RECIPE_CDP_PORT', previousRecipeCdpPort);
@@ -623,6 +633,7 @@ function runtimeOptionsFromCli(options: CliOptions): RuntimeOptions {
     launchExistingDist: optionFlag(options, 'launchExistingDist'),
     slot: optionString(options, 'slot'),
     validationRuntimeDir: optionString(options, 'validationRuntimeDir'),
+    record: optionFlag(options, 'record'),
   };
 }
 

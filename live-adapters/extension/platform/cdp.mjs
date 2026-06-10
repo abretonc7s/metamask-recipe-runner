@@ -11,6 +11,7 @@ import {
   recipeHarnessPath,
   walletFixturePath,
 } from '../../../src/paths.ts';
+import { captureActiveRecipeRecordingSnapshot } from '../../../src/run-recording.ts';
 
 // Resolve the Farmslot harness through normal package dependencies by default.
 // Local Farmslot source is only a dev override handled by src/paths.ts.
@@ -125,10 +126,29 @@ async function captureHelperSnapshot(page, context, relPath, metadata) {
 
   await page.session.call('Page.bringToFront');
   const pid = await captureHelperBrowserPid(context, page.port);
+  const timeoutMs = Number(metadata?.timeoutMs ?? 30000);
+  const sessionSnapshot = await captureActiveRecipeRecordingSnapshot(pid, absolute, timeoutMs);
+  if (sessionSnapshot) {
+    return {
+      path: relative,
+      type: 'screenshot',
+      nodeId: context.nodeId,
+      label: metadata?.label ?? `${context.nodeId} screenshot`,
+      category: metadata?.category ?? 'evidence',
+      mimeType: 'image/png',
+      metadata: {
+        provider: 'capture-helper',
+        mode: 'record_session_snapshot',
+        pid,
+        captureHelper: sessionSnapshot,
+      },
+    };
+  }
+
   const result = await runProcess(captureHelperPath(), ['snapshot', '--pid', String(pid), '--output', absolute], {
     cwd: context.projectRoot,
     env: process.env,
-    timeoutMs: Number(metadata?.timeoutMs ?? 30000),
+    timeoutMs,
   });
   if (result.exitCode !== 0) {
     throw new Error(
