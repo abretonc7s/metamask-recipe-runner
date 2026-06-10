@@ -35,6 +35,10 @@ summary.json · trace.json · artifact-manifest.json · screenshots/logs
 Dependency direction is one-way. Wrappers call the runner; the runner calls the
 shared harness/protocol packages; product apps are only driven at runtime.
 
+## Package shape
+
+This repo remains one npm package for now, but it has two internal areas: recipe execution and runtime lifecycle. See [Package Boundaries](package-boundaries.md) for the stability policy and why we are not splitting packages yet.
+
 ## The two subsystems
 
 This repo has two intentionally different kinds of code. Keeping them separate

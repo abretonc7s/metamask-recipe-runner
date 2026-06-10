@@ -251,17 +251,24 @@ clear_stale_metro_listener() {
 
 start_metro_tmux_window() {
   local metro_workers="$1" metro_log="$2" metro_pid="$3"
-  local session window cmd
-  [ -n "${TMUX:-}" ] || return 1
+  local session window cmd detached_session
   command -v tmux >/dev/null 2>&1 || return 1
-  session="$(tmux display-message -p '#S' 2>/dev/null || true)"
-  [ -n "$session" ] || return 1
   window="metro-${WATCHER_PORT}"
-  tmux kill-window -t "${session}:${window}" >/dev/null 2>&1 || true
   cmd="env CI=1 EXPO_NO_TYPESCRIPT_SETUP=1 WATCHER_PORT=${WATCHER_PORT} METRO_MAX_WORKERS=${metro_workers} yarn expo start --port ${WATCHER_PORT} > ${metro_log} 2>&1"
-  tmux new-window -d -t "$session" -n "$window" -c "$root" "$cmd"
-  printf 'tmux:%s:%s\n' "$session" "$window" > "$metro_pid"
-  log "Started Metro in tmux window ${session}:${window}"
+  session="$(tmux display-message -p '#S' 2>/dev/null || true)"
+  if [ -n "$session" ]; then
+    tmux kill-window -t "${session}:${window}" >/dev/null 2>&1 || true
+    tmux new-window -d -t "$session" -n "$window" -c "$root" "$cmd"
+    printf 'tmux:%s:%s\n' "$session" "$window" > "$metro_pid"
+    log "Started Metro in tmux window ${session}:${window}"
+    return 0
+  fi
+
+  detached_session="metamask-mobile-${WATCHER_PORT}-metro"
+  tmux kill-session -t "=${detached_session}" >/dev/null 2>&1 || true
+  tmux new-session -d -s "$detached_session" -c "$root" "$cmd"
+  printf 'tmux-session:%s\n' "$detached_session" > "$metro_pid"
+  log "Started Metro in tmux session ${detached_session}"
 }
 
 default_metro_workers() {
@@ -525,6 +532,11 @@ stop_metro() {
   local marker=""
   [ -f "$metro_pid" ] && marker="$(cat "$metro_pid" 2>/dev/null || true)"
   case "$marker" in
+    tmux-session:*)
+      local target_session="${marker#tmux-session:}"
+      log "Stopping Metro tmux session ${target_session}"
+      tmux kill-session -t "=${target_session}" >/dev/null 2>&1 || true
+      ;;
     tmux:*)
       local target="${marker#tmux:}"
       log "Stopping Metro tmux window ${target}"
@@ -733,9 +745,11 @@ NODE
 
 assert_runtime_ready() {
   init_context
-  local status_json
-  status_json="$(runtime_status --target "$root" --port "${WATCHER_PORT:-}" --runtime-dir "$(recipe_runtime_dir)" --json)"
-  if ! STATUS_JSON="$status_json" python3 -c 'import json, os, sys
+  local status_json attempt max_polls
+  max_polls="${MOBILE_RUNTIME_READY_POLLS:-60}"
+  for attempt in $(seq 1 "$max_polls"); do
+    status_json="$(runtime_status --target "$root" --port "${WATCHER_PORT:-}" --runtime-dir "$(recipe_runtime_dir)" --json)"
+    if STATUS_JSON="$status_json" python3 -c 'import json, os, sys
 status = json.loads(os.environ["STATUS_JSON"])
 if status.get("ready"):
     sys.exit(0)
@@ -746,10 +760,24 @@ print(
     file=sys.stderr,
 )
 sys.exit(1)'
-  then
-    return 1
-  fi
-  log "Runtime ready after prepare"
+    then
+      log "Runtime ready after prepare"
+      return 0
+    fi
+    if [ "$attempt" = "1" ] || [ $((attempt % 5)) -eq 0 ]; then
+      log "Waiting for runtime ready after prepare (${attempt}/${max_polls})"
+    fi
+    sleep 2
+  done
+  STATUS_JSON="$status_json" python3 -c 'import json, os, sys
+status = json.loads(os.environ["STATUS_JSON"])
+print(
+    "mm-recipe: runtime is not ready after prepare "
+    f"(reason={status.get('"'"'reason'"'"')}, metro={status.get('"'"'metro'"'"')}, "
+    f"debugTarget={status.get('"'"'debugTarget'"'"')}, bridge={status.get('"'"'bridge'"'"')})",
+    file=sys.stderr,
+)'
+  return 1
 }
 
 prepare_mobile() {
