@@ -13,6 +13,7 @@
     "end",
     "ui.navigate",
     "ui.press",
+    "ui.key_press",
     "ui.set_input",
     "ui.scroll",
     "ui.wait_for",
@@ -376,6 +377,33 @@
             "test_id": "network-selector-network-search-input",
             "value": "Sepolia",
             "intent": "Set text on a React Native TextInput by testID through the app control bridge"
+          }
+        }
+      ]
+    },
+    "ui.key_press": {
+      "description": "Send a trusted keyboard press to the currently focused UI element through the UI transport.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "next": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "key"
+        ],
+        "additionalProperties": true
+      },
+      "examples": [
+        {
+          "node": {
+            "action": "ui.key_press",
+            "key": "Enter",
+            "intent": "Send a trusted Enter key press to the focused UI element"
           }
         }
       ]
@@ -1619,6 +1647,10 @@
     },
     {
       "action": "ui.press",
+      "implementation": "@farmslot/recipe-harness/runtime/react-native-bridge"
+    },
+    {
+      "action": "ui.key_press",
       "implementation": "@farmslot/recipe-harness/runtime/react-native-bridge"
     },
     {
