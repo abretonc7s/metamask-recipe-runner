@@ -16,7 +16,8 @@
   "dependencies": {
     "@farmslot/protocol": "^0.6.0",
     "@farmslot/recipe-harness": "^0.2.0",
-    "tsx": "^4.19.0"
+    "tsx": "^4.19.0",
+    "viem": "^2.52.2"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

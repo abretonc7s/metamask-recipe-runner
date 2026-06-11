@@ -1,6 +1,6 @@
 import type { RecipeActionManifestDocument, RecipeValidationResult } from '@farmslot/protocol';
 
-export type MetaMaskRecipeAdapter = 'mobile' | 'extension';
+export type MetaMaskRecipeAdapter = 'mobile' | 'extension' | 'core';
 
 export interface CreateMetaMaskRunnerOptions {
   actionManifest?: RecipeActionManifestDocument;
@@ -28,6 +28,7 @@ export interface MetaMaskDoctorReport {
     | 'runner bridge with injected app bridge'
     | 'runner bridge with app bridge'
     | 'runner bridge available; app bridge not installed'
+    | 'headless controller (no bridge)'
     | 'unsupported/no bridge';
   runner: {
     name: '@metamask/recipe-runner';

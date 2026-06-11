@@ -30,6 +30,11 @@ export function repoShape(target: string): Record<string, unknown> {
 
 export function compatibilityMode(adapter: MetaMaskRecipeAdapter, target: string) {
   const shape = repoShape(target);
+  if (adapter === 'core') {
+    return fs.existsSync(path.join(target, 'packages/perps-controller/src/index.ts'))
+      ? 'headless controller (no bridge)'
+      : 'unsupported/no bridge';
+  }
   if (adapter === 'mobile') {
     if (shape.injectedHarness && shape.agenticService) return 'runner bridge with injected app bridge';
     if (shape.agenticService) return 'runner bridge with app bridge';

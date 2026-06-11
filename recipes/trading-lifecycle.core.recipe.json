@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "title": "MetaMask core headless Perps trading lifecycle",
+  "description": "Proves the headless `core` adapter places and closes a REAL Perps order on HyperLiquid testnet through the full signing path: a default viem signer backs the perps controller's wallet adapter, the active HyperLiquid testnet provider is initialized, and a small BTC long is opened then closed. Leaves the account FLAT. No CDP, bridge, or UI.",
+  "validate": {
+    "workflow": {
+      "entry": "status",
+      "nodes": {
+        "status": {
+          "action": "app.status",
+          "next": "start_flat",
+          "intent": "Resolve the core checkout and report headless compatibility mode"
+        },
+        "start_flat": {
+          "action": "metamask.perps.start_state",
+          "market": "BTC",
+          "positions": { "state": "none" },
+          "orders": { "state": "none" },
+          "network": "testnet",
+          "timeout_ms": 45000,
+          "next": "place_order",
+          "intent": "Converge BTC testnet baseline to flat (no positions, no orders) before the proof window"
+        },
+        "place_order": {
+          "action": "metamask.perps.place_order",
+          "market": "BTC",
+          "side": "long",
+          "notional": "11",
+          "leverage": 2,
+          "network": "testnet",
+          "timeout_ms": 45000,
+          "next": "assert_open",
+          "intent": "Place a small BTC long market order via the headless controller (real signed order to HL testnet)"
+        },
+        "assert_open": {
+          "action": "metamask.perps.assert_positions",
+          "market": "BTC",
+          "state": "open",
+          "timeout_ms": 30000,
+          "next": "close_position",
+          "intent": "Assert the BTC position opened"
+        },
+        "close_position": {
+          "action": "metamask.perps.close_positions",
+          "market": "BTC",
+          "network": "testnet",
+          "timeout_ms": 45000,
+          "next": "assert_flat",
+          "intent": "Close the BTC position via the headless controller (real signed close to HL testnet)"
+        },
+        "assert_flat": {
+          "action": "metamask.perps.assert_positions",
+          "market": "BTC",
+          "state": "none",
+          "timeout_ms": 30000,
+          "next": "teardown_flat",
+          "intent": "Assert the BTC position closed — account is flat"
+        },
+        "teardown_flat": {
+          "action": "metamask.perps.teardown_state",
+          "market": "BTC",
+          "positions": { "state": "none" },
+          "orders": { "state": "none" },
+          "network": "testnet",
+          "timeout_ms": 45000,
+          "next": "done",
+          "intent": "Restore BTC testnet baseline to flat after the proof (leave the shared account clean)"
+        },
+        "done": {
+          "action": "end",
+          "status": "pass"
+        }
+      }
+    }
+  }
+}

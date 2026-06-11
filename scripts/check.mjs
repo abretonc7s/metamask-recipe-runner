@@ -128,6 +128,9 @@ function validateCommittedRecipes() {
     extension: readJson(
       path.join(runnerDir, 'manifests/extension.action-manifest.json'),
     ),
+    core: readJson(
+      path.join(runnerDir, 'manifests/core.action-manifest.json'),
+    ),
   };
   for (const [adapter, manifest] of Object.entries(manifests)) {
     validateManifestExamples(manifest, adapter);
@@ -135,6 +138,7 @@ function validateCommittedRecipes() {
   const allActions = new Set([
     ...manifestActions(manifests.mobile),
     ...manifestActions(manifests.extension),
+    ...manifestActions(manifests.core),
   ]);
   for (const recipePath of recipes) {
     const recipe = readJson(recipePath);
@@ -206,6 +210,7 @@ function adapterForRecipe(recipePath) {
   const name = path.basename(recipePath);
   if (name.includes('.mobile.')) return 'mobile';
   if (name.includes('.extension.')) return 'extension';
+  if (name.includes('.core.')) return 'core';
   return null;
 }
 

@@ -51,6 +51,13 @@ const LIVE_ONLY_PERPS_ACTIONS = new Set([
   'metamask.perps.start_state',
   'metamask.perps.teardown_state',
 ]);
+
+// read_account is implemented only by the headless `core` adapter (it reads
+// HyperLiquid account state directly via the standalone controller path). Mobile/
+// extension have no live adapter for it, so it is gated to core: not advertised by
+// the mobile/extension semantic adapter list, and only treated as a required live
+// action when running under core.
+const CORE_ONLY_PERPS_ACTIONS = new Set(['metamask.perps.read_account']);
 const LIVE_ONLY_WALLET_ACTIONS = new Set([
   'metamask.wallet.setup',
   'metamask.wallet.ensure_unlocked',
@@ -59,16 +66,18 @@ const LIVE_ONLY_WALLET_ACTIONS = new Set([
 ]);
 const LIVE_ONLY_APP_ACTIONS = new Set(['ui.navigate']);
 
-function requiresLiveAdapter(action: string) {
+function requiresLiveAdapter(platform: MetaMaskRecipeAdapter, action: string) {
   return (
     LIVE_ONLY_PERPS_ACTIONS.has(action) ||
+    (platform === 'core' && CORE_ONLY_PERPS_ACTIONS.has(action)) ||
     LIVE_ONLY_WALLET_ACTIONS.has(action) ||
     LIVE_ONLY_APP_ACTIONS.has(action)
   );
 }
 
 function liveRuntimeConfigured(platform: MetaMaskRecipeAdapter, node: ActionNode) {
-  if (platform === 'mobile') return true;
+  // core drives the perps controller directly (HTTP reads) — no CDP/bridge runtime to probe.
+  if (platform === 'mobile' || platform === 'core') return true;
   return Boolean(node.cdp_port ?? process.env.CDP_PORT ?? process.env.RECIPE_CDP_PORT);
 }
 
@@ -83,7 +92,7 @@ async function runLiveFirst(
       `${action} refused allow_static_placeholder. MetaMask runner proof runs must use live adapters and real artifacts.`,
     );
   }
-  if (!requiresLiveAdapter(action) && !liveRuntimeConfigured(platform, node)) return null;
+  if (!requiresLiveAdapter(platform, action) && !liveRuntimeConfigured(platform, node)) return null;
   const live = await runLiveAdapterScript({ platform, action, node, context });
   if (!live) return null;
   const liveResult = isRecord(live.result) ? live.result : { result: live.result };
@@ -112,7 +121,7 @@ async function semanticResult(
 ): Promise<ActionResult> {
   const live = await runLiveFirst(platform, action, node, context);
   if (live) return live;
-  if (requiresLiveAdapter(action)) {
+  if (requiresLiveAdapter(platform, action)) {
     const expected = liveAdapterPathHint(platform, action);
     throw new Error(
       `${action} requires a live ${platform} adapter that drives a real supported app/API path; ` +
@@ -224,6 +233,8 @@ function createMetaMaskSemanticAdapters(platform: MetaMaskRecipeAdapter): Action
     'metamask.perps.assert_orders',
     'metamask.perps.start_state',
     'metamask.perps.teardown_state',
+    // read_account is core-only: only the headless core adapter implements it.
+    ...(platform === 'core' ? ['metamask.perps.read_account'] : []),
   ];
   return actions.map((action) =>
     simpleAdapter(action, async (node, context) =>
@@ -483,6 +494,18 @@ export function createMetaMaskUiTransport(
     createCdpWebUiTransport: (options: unknown) => UiActionTransport;
   },
 ): UiActionTransport {
+  if (platform === 'core') {
+    // Headless core has no UI surface. The core manifest declares no ui.* actions,
+    // so this transport is never exercised; reject explicitly if a recipe adds one.
+    return {
+      async execute(action) {
+        throw new Error(
+          `core adapter is headless and cannot execute UI action ${action}. ` +
+            'Use a perps read action or run the recipe against the mobile/extension adapter.',
+        );
+      },
+    };
+  }
   const base =
     platform === 'mobile'
       ? harness.createReactNativeBridgeUiTransport({ bridge: createMetaMaskMobileBridge() })

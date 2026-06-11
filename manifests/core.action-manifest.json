@@ -1,0 +1,1279 @@
+{
+ "runner_protocol_version": 1,
+ "action_registry_version": 1,
+ "supported_official_actions": [
+  "command",
+  "wait",
+  "assert_file",
+  "assert_json",
+  "assert_exit_code",
+  "assert_output",
+  "watch_logs",
+  "index_artifacts",
+  "end",
+  "app.status"
+ ],
+ "action_metadata": {
+  "command": {
+   "description": "Run a shell command from the project root.",
+   "examples": [
+    {
+     "node": {
+      "action": "command",
+      "cmd": "pwd",
+      "intent": "Run a shell command from the project root"
+     }
+    }
+   ]
+  },
+  "wait": {
+   "description": "Base wait action.",
+   "examples": [
+    {
+     "node": {
+      "action": "wait",
+      "duration_ms": 1,
+      "intent": "Base wait action"
+     }
+    }
+   ]
+  },
+  "watch_logs": {
+   "description": "Base log assertion/capture action.",
+   "examples": [
+    {
+     "node": {
+      "action": "watch_logs",
+      "path": "logs/app.log",
+      "intent": "Base log assertion/capture action"
+     }
+    }
+   ]
+  },
+  "index_artifacts": {
+   "description": "Index extra recipe-authored artifacts that already exist on disk.",
+   "examples": [
+    {
+     "node": {
+      "action": "index_artifacts",
+      "artifacts": [
+       {
+        "path": "reports/result.json",
+        "type": "report",
+        "category": "validation",
+        "label": "Validation report"
+       }
+      ],
+      "intent": "Register a pre-existing report artifact"
+     }
+    }
+   ]
+  },
+  "end": {
+   "description": "Base terminal action.",
+   "examples": [
+    {
+     "node": {
+      "action": "end",
+      "status": "pass"
+     }
+    }
+   ]
+  },
+  "assert_file": {
+   "description": "Assert that a project file exists and optionally contains text.",
+   "examples": [
+    {
+     "node": {
+      "action": "assert_file",
+      "path": "reports/result.txt",
+      "contains": "ok",
+      "intent": "Assert that a project file exists and optionally contains text"
+     }
+    }
+   ]
+  },
+  "assert_json": {
+   "description": "Assert a JSON file value with a JSONPath-style selector.",
+   "examples": [
+    {
+     "node": {
+      "action": "assert_json",
+      "path": "reports/result.json",
+      "assert": {
+       "path": "$.status",
+       "operator": "eq",
+       "value": "ok"
+      },
+      "intent": "Assert a JSON file value with a JSONPath-style selector"
+     }
+    }
+   ]
+  },
+  "assert_exit_code": {
+   "description": "Assert the exit code captured from a command node output.",
+   "examples": [
+    {
+     "node": {
+      "action": "assert_exit_code",
+      "source": "run-tests",
+      "expected": 0,
+      "intent": "Assert the exit code captured from a command node output"
+     }
+    }
+   ]
+  },
+  "assert_output": {
+   "description": "Assert stdout or stderr captured from a command node output.",
+   "examples": [
+    {
+     "node": {
+      "action": "assert_output",
+      "source": "run-tests",
+      "stream": "stdout",
+      "contains": "PASS",
+      "intent": "Assert stdout or stderr captured from a command node output"
+     }
+    }
+   ]
+  },
+  "app.status": {
+   "description": "Report the core checkout shape and headless compatibility mode for the perps controller.",
+   "examples": [
+    {
+     "node": {
+      "action": "app.status",
+      "intent": "Report the resolved core checkout status",
+      "next": "done"
+     }
+    }
+   ]
+  }
+ },
+ "custom_actions": [
+  {
+   "name": "metamask.perps.read_positions",
+   "owner": "metamask",
+   "description": "core Read live Perps positions directly from the perps controller (HyperLiquid testnet, HTTP read-only) and return the selected subset.",
+   "schema": {
+    "type": "object",
+    "properties": {
+     "action": {
+      "const": "metamask.perps.read_positions"
+     },
+     "market": {
+      "type": "string",
+      "description": "Single market symbol, e.g. BTC or ETH. Alias: symbol."
+     },
+     "symbol": {
+      "type": "string",
+      "description": "Alias for market."
+     },
+     "markets": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "description": "Explicit list of market symbols."
+     },
+     "symbols": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "description": "Alias for markets."
+     },
+     "mode": {
+      "type": "string",
+      "enum": [
+       "matching",
+       "all"
+      ],
+      "description": "matching selects requested symbols; all selects every live item returned by the controller."
+     },
+     "selector": {
+      "type": "object",
+      "description": "Optional structured selector with mode, symbols/markets, and side."
+     },
+     "side": {
+      "type": "string",
+      "enum": [
+       "long",
+       "short"
+      ],
+      "description": "Optional position side filter."
+     },
+     "account": {
+      "type": "string",
+      "description": "EVM address to read positions for; defaults to MM_TEST_ACCOUNT_ADDRESS."
+     },
+     "timeout_ms": {
+      "type": "number"
+     }
+    },
+    "required": [
+     "action"
+    ]
+   },
+   "examples": [
+    {
+     "description": "Read every live position for the configured account",
+     "node": {
+      "action": "metamask.perps.read_positions",
+      "mode": "all",
+      "intent": "Read Perps positions from the headless controller"
+     }
+    }
+   ],
+   "proof_effect": "E2E validation must record this action in trace.json; live-proof actions include liveAdapter/proofPath or controller output.",
+   "safety_notes": "Read-only HyperLiquid testnet HTTP query; must not inject controller/UI state to fabricate proof."
+  },
+  {
+   "name": "metamask.perps.read_orders",
+   "owner": "metamask",
+   "description": "core Read live Perps open orders directly from the perps controller (HyperLiquid testnet, HTTP read-only) and return the selected subset.",
+   "schema": {
+    "type": "object",
+    "properties": {
+     "action": {
+      "const": "metamask.perps.read_orders"
+     },
+     "market": {
+      "type": "string",
+      "description": "Single market symbol, e.g. BTC or ETH. Alias: symbol."
+     },
+     "symbol": {
+      "type": "string",
+      "description": "Alias for market."
+     },
+     "markets": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "description": "Explicit list of market symbols."
+     },
+     "symbols": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "description": "Alias for markets."
+     },
+     "mode": {
+      "type": "string",
+      "enum": [
+       "matching",
+       "all"
+      ],
+      "description": "matching selects requested symbols; all selects every live item returned by the controller."
+     },
+     "selector": {
+      "type": "object",
+      "description": "Optional structured selector with mode, symbols/markets, and side."
+     },
+     "side": {
+      "type": "string",
+      "enum": [
+       "long",
+       "short"
+      ],
+      "description": "Optional order side filter."
+     },
+     "account": {
+      "type": "string",
+      "description": "EVM address to read orders for; defaults to MM_TEST_ACCOUNT_ADDRESS."
+     },
+     "timeout_ms": {
+      "type": "number"
+     }
+    },
+    "required": [
+     "action"
+    ]
+   },
+   "examples": [
+    {
+     "description": "Read every live open order for the configured account",
+     "node": {
+      "action": "metamask.perps.read_orders",
+      "mode": "all",
+      "intent": "Read Perps open orders from the headless controller"
+     }
+    }
+   ],
+   "proof_effect": "E2E validation must record this action in trace.json; live-proof actions include liveAdapter/proofPath or controller output.",
+   "safety_notes": "Read-only HyperLiquid testnet HTTP query; must not inject controller/UI state to fabricate proof."
+  },
+  {
+   "name": "metamask.perps.read_account",
+   "owner": "metamask",
+   "description": "core Read live Perps account state (balances, margin) directly from the perps controller (HyperLiquid testnet, HTTP read-only).",
+   "schema": {
+    "type": "object",
+    "properties": {
+     "action": {
+      "const": "metamask.perps.read_account"
+     },
+     "account": {
+      "type": "string",
+      "description": "EVM address to read account state for; defaults to MM_TEST_ACCOUNT_ADDRESS."
+     },
+     "timeout_ms": {
+      "type": "number"
+     }
+    },
+    "required": [
+     "action"
+    ]
+   },
+   "examples": [
+    {
+     "description": "Read account state for the configured account",
+     "node": {
+      "action": "metamask.perps.read_account",
+      "intent": "Read Perps account state from the headless controller"
+     }
+    }
+   ],
+   "proof_effect": "E2E validation must record this action in trace.json; live-proof actions include liveAdapter/proofPath or controller output.",
+   "safety_notes": "Read-only HyperLiquid testnet HTTP query; must not inject controller/UI state to fabricate proof."
+  },
+  {
+   "name": "metamask.perps.place_order",
+   "owner": "metamask",
+   "description": "core Place a real Perps order on HyperLiquid testnet by driving the headless perps controller placeOrder() through the full signing/provider path. Testnet only Supports market (default) and resting limit orders (order_type=limit with price/offset_pct).",
+   "schema": {
+    "type": "object",
+    "properties": {
+     "action": {
+      "const": "metamask.perps.place_order"
+     },
+     "market": {
+      "type": "string",
+      "description": "Single market symbol, e.g. BTC or ETH. Alias: symbol."
+     },
+     "symbol": {
+      "type": "string",
+      "description": "Alias for market."
+     },
+     "markets": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "description": "Explicit list of market symbols (place_order requires exactly one)."
+     },
+     "symbols": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "description": "Alias for markets."
+     },
+     "selector": {
+      "type": "object",
+      "description": "Optional structured selector with mode, symbols/markets, and side."
+     },
+     "side": {
+      "type": "string",
+      "enum": [
+       "long",
+       "short"
+      ],
+      "description": "Order direction (default: long)."
+     },
+     "order_type": {
+      "type": "string",
+      "enum": [
+       "market",
+       "limit"
+      ],
+      "description": "market (default) fills immediately; limit places a RESTING order at price/offset_pct that does not fill. Alias: orderType."
+     },
+     "limit_price": {
+      "type": "string",
+      "description": "Absolute resting limit price (limit orders). Takes precedence over offset_pct. Alias: price/limitPrice."
+     },
+     "offset_pct": {
+      "type": "number",
+      "description": "Resting limit price as a percent offset from live mid for limit orders (e.g. -30 = 30%% below mid for a non-filling BUY; default -30 buy / +30 sell). Alias: offsetPct."
+     },
+     "amount": {
+      "type": "string",
+      "description": "USD notional alias."
+     },
+     "notional": {
+      "type": "string",
+      "description": "USD notional alias."
+     },
+     "leverage": {
+      "type": "number"
+     },
+     "account": {
+      "type": "string",
+      "description": "EVM address to trade for; defaults to MM_TEST_ACCOUNT_ADDRESS."
+     },
+     "timeout_ms": {
+      "type": "number"
+     }
+    },
+    "required": [
+     "action"
+    ]
+   },
+   "examples": [
+    {
+     "description": "Place a small BTC long market order on testnet",
+     "node": {
+      "action": "metamask.perps.place_order",
+      "market": "BTC",
+      "side": "long",
+      "notional": "11",
+      "leverage": 2,
+      "intent": "Place the requested Perps order via the headless controller",
+      "network": "testnet"
+     }
+    },
+    {
+     "description": "Place a resting BTC limit BUY 30%% below mid on testnet (does not fill)",
+     "node": {
+      "action": "metamask.perps.place_order",
+      "market": "BTC",
+      "side": "long",
+      "order_type": "limit",
+      "offset_pct": -30,
+      "notional": "11",
+      "leverage": 2,
+      "intent": "Place a resting Perps limit order via the headless controller",
+      "network": "testnet"
+     }
+    }
+   ],
+   "proof_effect": "E2E validation must record this action in trace.json; live-proof actions include liveAdapter/proofPath or controller output (order id, opened position).",
+   "safety_notes": "Submits a REAL signed order to HyperLiquid testnet; must not mock the signer/provider or inject controller state to fabricate proof."
+  },
+  {
+   "name": "metamask.perps.close_positions",
+   "owner": "metamask",
+   "description": "core Close selected live Perps positions on HyperLiquid testnet by driving the headless perps controller closePosition() through the full signing/provider path. Testnet only.",
+   "schema": {
+    "type": "object",
+    "properties": {
+     "action": {
+      "const": "metamask.perps.close_positions"
+     },
+     "market": {
+      "type": "string",
+      "description": "Single market symbol, e.g. BTC or ETH. Alias: symbol."
+     },
+     "symbol": {
+      "type": "string",
+      "description": "Alias for market."
+     },
+     "markets": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "description": "Explicit list of market symbols."
+     },
+     "symbols": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "description": "Alias for markets."
+     },
+     "mode": {
+      "type": "string",
+      "enum": [
+       "matching",
+       "all"
+      ],
+      "description": "matching selects requested symbols; all selects every live position."
+     },
+     "selector": {
+      "type": "object",
+      "description": "Optional structured selector with mode, symbols/markets, and side."
+     },
+     "side": {
+      "type": "string",
+      "enum": [
+       "long",
+       "short"
+      ],
+      "description": "Optional position side filter."
+     },
+     "account": {
+      "type": "string",
+      "description": "EVM address to close for; defaults to MM_TEST_ACCOUNT_ADDRESS."
+     },
+     "timeout_ms": {
+      "type": "number"
+     }
+    },
+    "required": [
+     "action"
+    ]
+   },
+   "examples": [
+    {
+     "description": "Close the BTC position on testnet",
+     "node": {
+      "action": "metamask.perps.close_positions",
+      "market": "BTC",
+      "intent": "Close selected Perps positions via the headless controller",
+      "network": "testnet"
+     }
+    }
+   ],
+   "proof_effect": "E2E validation must record this action in trace.json; live-proof actions include liveAdapter/proofPath or controller output (positions absent after close).",
+   "safety_notes": "Submits REAL signed close orders to HyperLiquid testnet; must not mock the signer/provider or inject controller state to fabricate proof."
+  },
+  {
+   "name": "metamask.perps.assert_positions",
+   "owner": "metamask",
+   "description": "core Assert selected live Perps positions are present or absent via the headless controller standalone read path. Throws on mismatch.",
+   "schema": {
+    "type": "object",
+    "properties": {
+     "action": {
+      "const": "metamask.perps.assert_positions"
+     },
+     "market": {
+      "type": "string",
+      "description": "Single market symbol, e.g. BTC or ETH. Alias: symbol."
+     },
+     "symbol": {
+      "type": "string",
+      "description": "Alias for market."
+     },
+     "markets": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "description": "Explicit list of market symbols."
+     },
+     "symbols": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "description": "Alias for markets."
+     },
+     "mode": {
+      "type": "string",
+      "enum": [
+       "matching",
+       "all"
+      ],
+      "description": "matching selects requested symbols; all selects every live position."
+     },
+     "selector": {
+      "type": "object",
+      "description": "Optional structured selector with mode, symbols/markets, and side."
+     },
+     "side": {
+      "type": "string",
+      "enum": [
+       "long",
+       "short"
+      ],
+      "description": "Optional position side filter."
+     },
+     "state": {
+      "type": "string",
+      "enum": [
+       "none",
+       "absent",
+       "closed",
+       "open",
+       "present"
+      ],
+      "description": "Expected selected position state."
+     },
+     "account": {
+      "type": "string",
+      "description": "EVM address to read for; defaults to MM_TEST_ACCOUNT_ADDRESS."
+     },
+     "timeout_ms": {
+      "type": "number"
+     }
+    },
+    "required": [
+     "action"
+    ]
+   },
+   "examples": [
+    {
+     "description": "Assert BTC position is open",
+     "node": {
+      "action": "metamask.perps.assert_positions",
+      "state": "open",
+      "market": "BTC",
+      "intent": "Assert the expected Perps position state via the headless controller"
+     }
+    }
+   ],
+   "proof_effect": "E2E validation must record this action in trace.json; live-proof actions include liveAdapter/proofPath or controller output.",
+   "safety_notes": "Read-only HyperLiquid testnet HTTP query; must not inject controller state to fabricate proof."
+  },
+  {
+   "name": "metamask.perps.ensure_positions",
+   "owner": "metamask",
+   "description": "core Higher-level wrapper that reads selected positions, places or closes via the headless controller as needed, then asserts the final position state. Testnet only.",
+   "schema": {
+    "type": "object",
+    "properties": {
+     "action": {
+      "const": "metamask.perps.ensure_positions"
+     },
+     "market": {
+      "type": "string",
+      "description": "Single market symbol, e.g. BTC or ETH. Alias: symbol."
+     },
+     "symbol": {
+      "type": "string",
+      "description": "Alias for market."
+     },
+     "markets": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "description": "Explicit list of market symbols."
+     },
+     "symbols": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "description": "Alias for markets."
+     },
+     "mode": {
+      "type": "string",
+      "enum": [
+       "matching",
+       "all"
+      ],
+      "description": "matching selects requested symbols; all selects every live position."
+     },
+     "selector": {
+      "type": "object",
+      "description": "Optional structured selector with mode, symbols/markets, and side."
+     },
+     "side": {
+      "type": "string",
+      "enum": [
+       "long",
+       "short"
+      ],
+      "description": "Order/position direction (default: long when placing)."
+     },
+     "state": {
+      "type": "string",
+      "enum": [
+       "none",
+       "absent",
+       "closed",
+       "open",
+       "present"
+      ],
+      "description": "Desired selected position state to converge to."
+     },
+     "amount": {
+      "type": "string",
+      "description": "USD notional alias (used when placing to reach state open)."
+     },
+     "notional": {
+      "type": "string",
+      "description": "USD notional alias."
+     },
+     "leverage": {
+      "type": "number"
+     },
+     "account": {
+      "type": "string",
+      "description": "EVM address to trade for; defaults to MM_TEST_ACCOUNT_ADDRESS."
+     },
+     "timeout_ms": {
+      "type": "number"
+     }
+    },
+    "required": [
+     "action"
+    ]
+   },
+   "examples": [
+    {
+     "description": "Ensure no BTC position before the proof window",
+     "node": {
+      "action": "metamask.perps.ensure_positions",
+      "state": "none",
+      "market": "BTC",
+      "intent": "Converge Perps positions to the requested state via the headless controller",
+      "network": "testnet"
+     }
+    }
+   ],
+   "proof_effect": "E2E validation must record this action in trace.json; live-proof actions include liveAdapter/proofPath or controller output.",
+   "safety_notes": "May submit REAL signed orders to HyperLiquid testnet; must not mock the signer/provider or inject controller state to fabricate proof."
+  },
+  {
+   "name": "metamask.perps.close_orders",
+   "owner": "metamask",
+   "description": "core Testnet only (the headless core adapter never mutates mainnet).Cancel selected live Perps open orders. Use selector/mode params to cancel matching symbols or all orders.",
+   "schema": {
+    "type": "object",
+    "properties": {
+     "action": {
+      "const": "metamask.perps.close_orders"
+     },
+     "market": {
+      "type": "string",
+      "description": "Single market symbol, e.g. BTC or ETH. Alias: symbol."
+     },
+     "symbol": {
+      "type": "string",
+      "description": "Alias for market."
+     },
+     "markets": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "description": "Explicit list of market symbols."
+     },
+     "symbols": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "description": "Alias for markets."
+     },
+     "mode": {
+      "type": "string",
+      "enum": [
+       "matching",
+       "all"
+      ],
+      "description": "matching selects requested symbols; all selects every live item returned by the product."
+     },
+     "selector": {
+      "type": "object",
+      "description": "Optional structured selector with mode, symbols/markets, and side."
+     },
+     "side": {
+      "type": "string",
+      "enum": [
+       "long",
+       "short"
+      ],
+      "description": "Optional position/order side filter."
+     },
+     "timeout_ms": {
+      "type": "number"
+     }
+    },
+    "required": [
+     "action"
+    ]
+   },
+   "examples": [
+    {
+     "description": "Cancel every open order",
+     "node": {
+      "action": "metamask.perps.close_orders",
+      "mode": "all",
+      "intent": "Cancel selected Perps orders before continuing",
+      "network": "testnet"
+     }
+    },
+    {
+     "description": "Cancel BTC orders only",
+     "node": {
+      "action": "metamask.perps.close_orders",
+      "market": "BTC",
+      "intent": "Cancel selected Perps orders before continuing",
+      "network": "testnet"
+     }
+    }
+   ],
+   "proof_effect": "E2E validation must record this action in trace.json; live-proof actions include liveAdapter/proofPath or target runtime output.",
+   "safety_notes": "Must not inject mid-recipe UI/app state to fabricate proof."
+  },
+  {
+   "name": "metamask.perps.assert_orders",
+   "owner": "metamask",
+   "description": "core Assert selected live Perps open orders are present or absent.",
+   "schema": {
+    "type": "object",
+    "properties": {
+     "action": {
+      "const": "metamask.perps.assert_orders"
+     },
+     "market": {
+      "type": "string",
+      "description": "Single market symbol, e.g. BTC or ETH. Alias: symbol."
+     },
+     "symbol": {
+      "type": "string",
+      "description": "Alias for market."
+     },
+     "markets": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "description": "Explicit list of market symbols."
+     },
+     "symbols": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "description": "Alias for markets."
+     },
+     "mode": {
+      "type": "string",
+      "enum": [
+       "matching",
+       "all"
+      ],
+      "description": "matching selects requested symbols; all selects every live item returned by the product."
+     },
+     "selector": {
+      "type": "object",
+      "description": "Optional structured selector with mode, symbols/markets, and side."
+     },
+     "side": {
+      "type": "string",
+      "enum": [
+       "long",
+       "short"
+      ],
+      "description": "Optional position/order side filter."
+     },
+     "timeout_ms": {
+      "type": "number"
+     },
+     "state": {
+      "type": "string",
+      "enum": [
+       "none",
+       "absent",
+       "closed",
+       "open",
+       "present"
+      ],
+      "description": "Desired/expected selected collection state."
+     }
+    },
+    "required": [
+     "action"
+    ]
+   },
+   "examples": [
+    {
+     "description": "Assert no BTC open orders",
+     "node": {
+      "action": "metamask.perps.assert_orders",
+      "state": "none",
+      "market": "BTC",
+      "intent": "Assert the expected Perps open order state"
+     }
+    }
+   ],
+   "proof_effect": "E2E validation must record this action in trace.json; live-proof actions include liveAdapter/proofPath or target runtime output.",
+   "safety_notes": "Must not inject mid-recipe UI/app state to fabricate proof."
+  },
+  {
+   "name": "metamask.perps.ensure_orders",
+   "owner": "metamask",
+   "description": "core Testnet only (the headless core adapter never mutates mainnet).Higher-level wrapper that reads selected orders, cancels when needed, then asserts final order state.",
+   "schema": {
+    "type": "object",
+    "properties": {
+     "action": {
+      "const": "metamask.perps.ensure_orders"
+     },
+     "market": {
+      "type": "string",
+      "description": "Single market symbol, e.g. BTC or ETH. Alias: symbol."
+     },
+     "symbol": {
+      "type": "string",
+      "description": "Alias for market."
+     },
+     "markets": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "description": "Explicit list of market symbols."
+     },
+     "symbols": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "description": "Alias for markets."
+     },
+     "mode": {
+      "type": "string",
+      "enum": [
+       "matching",
+       "all"
+      ],
+      "description": "matching selects requested symbols; all selects every live item returned by the product."
+     },
+     "selector": {
+      "type": "object",
+      "description": "Optional structured selector with mode, symbols/markets, and side."
+     },
+     "side": {
+      "type": "string",
+      "enum": [
+       "long",
+       "short"
+      ],
+      "description": "Optional position/order side filter."
+     },
+     "timeout_ms": {
+      "type": "number"
+     },
+     "state": {
+      "type": "string",
+      "enum": [
+       "none",
+       "absent",
+       "closed",
+       "open",
+       "present"
+      ],
+      "description": "Desired/expected selected collection state."
+     }
+    },
+    "required": [
+     "action"
+    ]
+   },
+   "examples": [
+    {
+     "description": "Ensure no open orders before proof window",
+     "node": {
+      "action": "metamask.perps.ensure_orders",
+      "state": "none",
+      "mode": "all",
+      "intent": "Converge Perps orders to the requested state",
+      "network": "testnet"
+     }
+    }
+   ],
+   "proof_effect": "E2E validation must record this action in trace.json; live-proof actions include liveAdapter/proofPath or target runtime output.",
+   "safety_notes": "Must not inject mid-recipe UI/app state to fabricate proof."
+  },
+  {
+   "name": "metamask.perps.start_state",
+   "owner": "metamask",
+   "description": "core Testnet only (the headless core adapter never mutates mainnet).Recommended configurable Perps start state that composes reusable domain operations before the proof window. Headless: converges POSITION and ORDER baselines on testnet via the controller; no navigation/page/HUD.",
+   "schema": {
+    "type": "object",
+    "properties": {
+     "action": {
+      "const": "metamask.perps.start_state"
+     },
+     "profile": {
+      "type": "string",
+      "description": "Optional profile such as clean_market_testnet, open_position_testnet, open_order_testnet, or provider_mainnet_readonly."
+     },
+     "account": {
+      "type": "string"
+     },
+     "provider": {
+      "type": "string",
+      "description": "Requested Perps provider, e.g. hyperliquid."
+     },
+     "network": {
+      "type": "string",
+      "enum": [
+       "testnet"
+      ]
+     },
+     "market": {
+      "type": "string"
+     },
+     "symbol": {
+      "type": "string"
+     },
+     "markets": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     },
+     "symbols": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     },
+     "positions": {
+      "oneOf": [
+       {
+        "type": "object"
+       },
+       {
+        "const": false
+       }
+      ],
+      "description": "Desired position baseline or false to skip."
+     },
+     "orders": {
+      "oneOf": [
+       {
+        "type": "object"
+       },
+       {
+        "const": false
+       }
+      ],
+      "description": "Desired open-order baseline or false to skip."
+     },
+     "timeout_ms": {
+      "type": "number"
+     }
+    },
+    "required": [
+     "action"
+    ]
+   },
+   "examples": [
+    {
+     "description": "Clean BTC testnet market state",
+     "node": {
+      "action": "metamask.perps.start_state",
+      "profile": "clean_market_testnet",
+      "market": "BTC",
+      "positions": {
+       "state": "none"
+      },
+      "orders": {
+       "state": "none"
+      },
+      "intent": "Prepare the Perps start state for the proof",
+      "network": "testnet"
+     }
+    },
+    {
+     "description": "Start with an open ETH long position",
+     "node": {
+      "action": "metamask.perps.start_state",
+      "profile": "open_position_testnet",
+      "market": "ETH",
+      "side": "long",
+      "positions": {
+       "state": "open",
+       "notional": "10",
+       "leverage": 2
+      },
+      "intent": "Prepare the Perps start state for the proof",
+      "network": "testnet"
+     }
+    }
+   ],
+   "proof_effect": "Runs in setup/teardown phase and must be visible in trace.json; proof videos can keep this as trace-only setup.",
+   "safety_notes": "Composes supported app/API paths and must not mutate React/Redux/MobX/DOM/local storage to fabricate proof."
+  },
+  {
+   "name": "metamask.perps.teardown_state",
+   "owner": "metamask",
+   "description": "core Recommended configurable Perps teardown state that restores the selected environment after proof. Headless: converges POSITION and ORDER baselines on testnet via the controller; no navigation/page/HUD.",
+   "schema": {
+    "type": "object",
+    "properties": {
+     "action": {
+      "const": "metamask.perps.teardown_state"
+     },
+     "profile": {
+      "type": "string",
+      "description": "Optional profile such as clean_market_testnet, open_position_testnet, open_order_testnet, or provider_mainnet_readonly."
+     },
+     "account": {
+      "type": "string"
+     },
+     "provider": {
+      "type": "string",
+      "description": "Requested Perps provider, e.g. hyperliquid."
+     },
+     "network": {
+      "type": "string",
+      "enum": [
+       "testnet"
+      ]
+     },
+     "market": {
+      "type": "string"
+     },
+     "symbol": {
+      "type": "string"
+     },
+     "markets": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     },
+     "symbols": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     },
+     "positions": {
+      "oneOf": [
+       {
+        "type": "object"
+       },
+       {
+        "const": false
+       }
+      ],
+      "description": "Desired position baseline or false to skip."
+     },
+     "orders": {
+      "oneOf": [
+       {
+        "type": "object"
+       },
+       {
+        "const": false
+       }
+      ],
+      "description": "Desired open-order baseline or false to skip."
+     },
+     "timeout_ms": {
+      "type": "number"
+     }
+    },
+    "required": [
+     "action"
+    ]
+   },
+   "examples": [
+    {
+     "description": "Return BTC test account to clean state",
+     "node": {
+      "action": "metamask.perps.teardown_state",
+      "market": "BTC",
+      "positions": {
+       "state": "none"
+      },
+      "orders": {
+       "state": "none"
+      },
+      "intent": "Restore Perps state after the proof"
+     }
+    },
+    {
+     "description": "Teardown only state created by selected market",
+     "node": {
+      "action": "metamask.perps.teardown_state",
+      "market": "BTC",
+      "intent": "Restore Perps state after the proof"
+     }
+    }
+   ],
+   "proof_effect": "Runs in setup/teardown phase and must be visible in trace.json; proof videos can keep this as trace-only setup.",
+   "safety_notes": "Composes supported app/API paths and must not mutate React/Redux/MobX/DOM/local storage to fabricate proof."
+  }
+ ],
+ "state_refs": [
+  {
+   "name": "perps.positions",
+   "description": "Normalized Perps position state read from the headless controller."
+  }
+ ],
+ "pre_conditions": [
+  {
+   "id": "no-mid-recipe-state-injection",
+   "description": "Recipes must drive the real perps controller read path for proof state."
+  }
+ ],
+ "native_bindings": [
+  {
+   "action": "command",
+   "implementation": "@farmslot/recipe-harness/adapters/core"
+  },
+  {
+   "action": "wait",
+   "implementation": "@farmslot/recipe-harness/adapters/core"
+  },
+  {
+   "action": "assert_file",
+   "implementation": "@farmslot/recipe-harness/adapters/core"
+  },
+  {
+   "action": "assert_json",
+   "implementation": "@farmslot/recipe-harness/adapters/core"
+  },
+  {
+   "action": "assert_exit_code",
+   "implementation": "@farmslot/recipe-harness/adapters/core"
+  },
+  {
+   "action": "assert_output",
+   "implementation": "@farmslot/recipe-harness/adapters/core"
+  },
+  {
+   "action": "watch_logs",
+   "implementation": "@farmslot/recipe-harness/adapters/core"
+  },
+  {
+   "action": "index_artifacts",
+   "implementation": "@farmslot/recipe-harness/adapters/core"
+  },
+  {
+   "action": "end",
+   "implementation": "@farmslot/recipe-harness/adapters/core"
+  },
+  {
+   "action": "app.status",
+   "implementation": "@metamask/recipe-runner/platform-status"
+  },
+  {
+   "action": "metamask.perps.read_positions",
+   "implementation": "@metamask/recipe-runner/core/perps"
+  },
+  {
+   "action": "metamask.perps.read_orders",
+   "implementation": "@metamask/recipe-runner/core/perps"
+  },
+  {
+   "action": "metamask.perps.read_account",
+   "implementation": "@metamask/recipe-runner/core/perps"
+  },
+  {
+   "action": "metamask.perps.place_order",
+   "implementation": "@metamask/recipe-runner/core/perps"
+  },
+  {
+   "action": "metamask.perps.close_positions",
+   "implementation": "@metamask/recipe-runner/core/perps"
+  },
+  {
+   "action": "metamask.perps.assert_positions",
+   "implementation": "@metamask/recipe-runner/core/perps"
+  },
+  {
+   "action": "metamask.perps.ensure_positions",
+   "implementation": "@metamask/recipe-runner/core/perps"
+  }
+ ],
+ "capability_notes": [
+  "core is a headless adapter: it instantiates @metamask/perps-controller against a resolved MetaMask/core checkout and reads HyperLiquid testnet over HTTP. No CDP, bridge, or UI is involved. Slice 1 implements read-only perps actions. Slice 2 adds a default viem signer + write actions (place_order, close_positions, ensure_positions, assert_positions) that submit real signed orders to HyperLiquid testnet via the controller's full provider path."
+ ],
+ "action_profiles": []
+}

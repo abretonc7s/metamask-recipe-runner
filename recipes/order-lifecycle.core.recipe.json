@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "title": "MetaMask core headless Perps order lifecycle",
+  "description": "Proves the headless `core` adapter places and cancels a REAL resting Perps LIMIT order on HyperLiquid testnet through the full signing path: a default viem signer backs the perps controller's wallet adapter, the active HyperLiquid testnet provider is initialized, a BTC limit BUY 30% below mid is placed (does not fill — rests on the book), asserted open, then canceled and asserted gone. Leaves the account FLAT — no open orders and no open positions. No CDP, bridge, or UI.",
+  "validate": {
+    "workflow": {
+      "entry": "status",
+      "nodes": {
+        "status": {
+          "action": "app.status",
+          "next": "start_flat",
+          "intent": "Resolve the core checkout and report headless compatibility mode"
+        },
+        "start_flat": {
+          "action": "metamask.perps.start_state",
+          "market": "BTC",
+          "positions": { "state": "none" },
+          "orders": { "state": "none" },
+          "network": "testnet",
+          "timeout_ms": 45000,
+          "next": "place_order",
+          "intent": "Converge BTC testnet baseline to flat (no positions, no orders) before the proof window"
+        },
+        "place_order": {
+          "action": "metamask.perps.place_order",
+          "market": "BTC",
+          "side": "long",
+          "order_type": "limit",
+          "offset_pct": -30,
+          "notional": "11",
+          "leverage": 2,
+          "network": "testnet",
+          "timeout_ms": 45000,
+          "next": "assert_open",
+          "intent": "Place a resting BTC limit BUY 30% below mid via the headless controller (real signed limit order to HL testnet; does not fill)"
+        },
+        "assert_open": {
+          "action": "metamask.perps.assert_orders",
+          "market": "BTC",
+          "state": "open",
+          "timeout_ms": 30000,
+          "next": "cancel_order",
+          "intent": "Assert the BTC resting limit order opened"
+        },
+        "cancel_order": {
+          "action": "metamask.perps.close_orders",
+          "market": "BTC",
+          "network": "testnet",
+          "timeout_ms": 45000,
+          "next": "assert_none",
+          "intent": "Cancel the BTC resting limit order via the headless controller (real signed cancel to HL testnet)"
+        },
+        "assert_none": {
+          "action": "metamask.perps.assert_orders",
+          "market": "BTC",
+          "state": "none",
+          "timeout_ms": 30000,
+          "next": "teardown_flat",
+          "intent": "Assert the BTC order canceled — no open orders remain"
+        },
+        "teardown_flat": {
+          "action": "metamask.perps.teardown_state",
+          "market": "BTC",
+          "positions": { "state": "none" },
+          "orders": { "state": "none" },
+          "network": "testnet",
+          "timeout_ms": 45000,
+          "next": "done",
+          "intent": "Restore BTC testnet baseline to flat after the proof (leave the shared account clean)"
+        },
+        "done": {
+          "action": "end",
+          "status": "pass"
+        }
+      }
+    }
+  }
+}

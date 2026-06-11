@@ -55,15 +55,15 @@ const COMMANDS: Record<string, (args: ParsedArgs) => Promise<number>> = {
 
 function usage() {
   console.error(`Usage:
-  metamask-recipe manifest --adapter <mobile|extension> [--json]
-  metamask-recipe actions --adapter <mobile|extension> [--action <name>] [--json]
-  metamask-recipe doctor --adapter <mobile|extension> --target <repo> [--json]
+  metamask-recipe manifest --adapter <mobile|extension|core> [--json]
+  metamask-recipe actions --adapter <mobile|extension|core> [--action <name>] [--json]
+  metamask-recipe doctor --adapter <mobile|extension|core> --target <repo> [--json]
   metamask-recipe runtime-health --adapter extension --target <repo> --cdp-port <port> [--json]
   metamask-recipe runtime-decision --adapter extension --target <repo> [--cdp-port <port>] [--watch-log <path>] [--record] [--json]
   metamask-recipe runtime-launch --adapter extension --target <repo> --cdp-port <port> [--start-watch] [--chrome-user-data-dir <dir>] [--artifacts-dir <dir>] [--json]
   metamask-recipe resolve-extension --adapter extension --target <repo> [--cdp-port <port>] [--json]
   metamask-recipe ensure-ready --adapter extension --target <repo> --cdp-port <port> [--json]
-  metamask-recipe run <recipe.json> --adapter <mobile|extension> --artifacts-dir <dir> [--project-root <repo>] [--action-manifest <path>] [--cdp-port <port>] [--slot <slot-id>] [--launch-existing-dist] [--json]
+  metamask-recipe run <recipe.json> --adapter <mobile|extension|core> --artifacts-dir <dir> [--project-root <repo>] [--action-manifest <path>] [--cdp-port <port>] [--slot <slot-id>] [--launch-existing-dist] [--json]
   metamask-recipe self-test [--artifacts-dir <dir>] [--json]
 `);
 }

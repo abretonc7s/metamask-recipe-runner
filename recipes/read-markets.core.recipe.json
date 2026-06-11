@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "title": "MetaMask core headless Perps read",
+  "description": "Proves the headless `core` adapter instantiates @metamask/perps-controller against a resolved MetaMask/core checkout and reads live HyperLiquid testnet Perps state (positions, open orders, account state) over HTTP — no CDP, bridge, or UI.",
+  "validate": {
+    "workflow": {
+      "entry": "status",
+      "nodes": {
+        "status": {
+          "action": "app.status",
+          "next": "read_positions",
+          "intent": "Resolve the core checkout and report headless compatibility mode"
+        },
+        "read_positions": {
+          "action": "metamask.perps.read_positions",
+          "mode": "all",
+          "next": "read_orders",
+          "intent": "Read live Perps positions from the headless controller"
+        },
+        "read_orders": {
+          "action": "metamask.perps.read_orders",
+          "mode": "all",
+          "next": "read_account",
+          "intent": "Read live Perps open orders from the headless controller"
+        },
+        "read_account": {
+          "action": "metamask.perps.read_account",
+          "next": "done",
+          "intent": "Read live Perps account state from the headless controller"
+        },
+        "done": {
+          "action": "end",
+          "status": "pass"
+        }
+      }
+    }
+  }
+}

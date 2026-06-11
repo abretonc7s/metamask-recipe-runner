@@ -182,6 +182,43 @@ export async function resolveLiveAdapter(platform: string, action: string) {
   return firstExecutablePath(candidatePaths(platform, action));
 }
 
+// Workspace packages the headless core adapter imports as runtime values. In an
+// unbuilt MetaMask/core checkout these have no dist/, so their package "exports"
+// (which point only at dist) cannot resolve. We point tsx at the package src via
+// a generated tsconfig paths map so the adapter can import the controller without
+// building or modifying the core checkout.
+const CORE_WORKSPACE_PACKAGES = [
+  '@metamask/base-controller',
+  '@metamask/messenger',
+  '@metamask/controller-utils',
+  '@metamask/keyring-controller',
+];
+
+async function platformAdapterEnv(
+  platform: string,
+  projectRoot: string,
+  tempDir: string,
+): Promise<NodeJS.ProcessEnv> {
+  if (platform !== 'core') return {};
+  const paths: Record<string, string[]> = {};
+  for (const pkg of CORE_WORKSPACE_PACKAGES) {
+    const packageDir = path.join(projectRoot, 'packages', pkg.replace('@metamask/', ''));
+    const distEntry = path.join(packageDir, 'dist/index.cjs');
+    if (existsSync(distEntry)) continue; // built package resolves normally
+    const srcDir = path.join(packageDir, 'src');
+    if (!existsSync(path.join(srcDir, 'index.ts'))) continue;
+    paths[pkg] = [path.join(srcDir, 'index.ts')];
+    paths[`${pkg}/*`] = [path.join(srcDir, '*')];
+  }
+  if (Object.keys(paths).length === 0) return {};
+  const tsconfigPath = path.join(tempDir, 'core-adapter.tsconfig.json');
+  await writeFile(
+    tsconfigPath,
+    `${JSON.stringify({ compilerOptions: { baseUrl: projectRoot, paths } }, null, 2)}\n`,
+  );
+  return { TSX_TSCONFIG_PATH: tsconfigPath };
+}
+
 export async function runLiveAdapterScript({ platform, action, node, context }: { platform: string; action: string; node: Record<string, any>; context: any }) {
   const script = await resolveLiveAdapter(platform, action);
   if (!script) return null;
@@ -203,11 +240,13 @@ export async function runLiveAdapterScript({ platform, action, node, context }: 
   };
   await writeFile(inputPath, `${JSON.stringify(input, null, 2)}\n`);
   const command = commandFor(script);
+  const platformEnv = await platformAdapterEnv(platform, context.projectRoot, tempDir);
   const result = await runProcess(command.command, [...command.args, inputPath], {
     cwd: context.projectRoot,
     env: {
       ...process.env,
       ...context.env,
+      ...platformEnv,
       METAMASK_RECIPE_ADAPTER_INPUT: inputPath,
       METAMASK_RECIPE_ADAPTER_OUTPUT: outputPath,
     },

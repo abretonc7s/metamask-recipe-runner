@@ -113,8 +113,8 @@ function isProtocolRoot(candidate) {
 }
 
 export function assertAdapter(adapter: unknown): asserts adapter is MetaMaskRecipeAdapter {
-  if (adapter !== 'mobile' && adapter !== 'extension') {
-    throw new Error('Adapter must be mobile or extension.');
+  if (adapter !== 'mobile' && adapter !== 'extension' && adapter !== 'core') {
+    throw new Error('Adapter must be mobile, extension, or core.');
   }
 }
 

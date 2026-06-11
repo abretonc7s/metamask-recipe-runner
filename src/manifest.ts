@@ -13,14 +13,18 @@ export function loadMetaMaskExtensionActionManifest(): RecipeActionManifestDocum
   return asActionManifest(readJson(manifestPath('extension')));
 }
 
+export function loadMetaMaskCoreActionManifest(): RecipeActionManifestDocument {
+  return asActionManifest(readJson(manifestPath('core')));
+}
+
 export function loadActionManifest(
   adapter: MetaMaskRecipeAdapter,
   overridePath?: string,
 ): RecipeActionManifestDocument {
   if (overridePath) return asActionManifest(readJson(path.resolve(overridePath)));
-  return adapter === 'mobile'
-    ? loadMetaMaskMobileActionManifest()
-    : loadMetaMaskExtensionActionManifest();
+  if (adapter === 'mobile') return loadMetaMaskMobileActionManifest();
+  if (adapter === 'core') return loadMetaMaskCoreActionManifest();
+  return loadMetaMaskExtensionActionManifest();
 }
 
 export async function validateManifest(
