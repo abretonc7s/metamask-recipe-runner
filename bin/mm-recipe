@@ -245,17 +245,40 @@ clear_stale_metro_listener() {
   log "Clearing stale Metro listener on port ${WATCHER_PORT}: $pids"
   # shellcheck disable=SC2086
   kill $pids 2>/dev/null || true
-  sleep 2
+  for _ in $(seq 1 20); do
+    pids="$(lsof -nP -iTCP:${WATCHER_PORT:-8081} -sTCP:LISTEN -t 2>/dev/null | tr '\n' ' ' || true)"
+    [ -z "$pids" ] && return 0
+    sleep 0.25
+  done
+  log "Metro listener still held on port ${WATCHER_PORT}; forcing: $pids"
+  # shellcheck disable=SC2086
+  kill -KILL $pids 2>/dev/null || true
+  for _ in $(seq 1 20); do
+    pids="$(lsof -nP -iTCP:${WATCHER_PORT:-8081} -sTCP:LISTEN -t 2>/dev/null | tr '\n' ' ' || true)"
+    [ -z "$pids" ] && return 0
+    sleep 0.25
+  done
+  echo "mm-recipe: port ${WATCHER_PORT:-8081} is still occupied after killing stale Metro: $pids" >&2
+  return 1
 }
 
 
 start_metro_tmux_window() {
   local metro_workers="$1" metro_log="$2" metro_pid="$3"
-  local session window cmd detached_session
+  local session window cmd detached_session slot_session
   command -v tmux >/dev/null 2>&1 || return 1
   window="metro-${WATCHER_PORT}"
   cmd="env CI=1 EXPO_NO_TYPESCRIPT_SETUP=1 WATCHER_PORT=${WATCHER_PORT} METRO_MAX_WORKERS=${metro_workers} yarn expo start --port ${WATCHER_PORT} > ${metro_log} 2>&1"
-  session="$(tmux display-message -p '#S' 2>/dev/null || true)"
+  session=""
+  if [ -n "${slot:-}" ]; then
+    slot_session="mm-${slot}"
+    if tmux has-session -t "=${slot_session}" 2>/dev/null; then
+      session="$slot_session"
+    fi
+  fi
+  if [ -z "$session" ]; then
+    session="$(tmux display-message -p '#S' 2>/dev/null || true)"
+  fi
   if [ -n "$session" ]; then
     tmux kill-window -t "${session}:${window}" >/dev/null 2>&1 || true
     tmux new-window -d -t "$session" -n "$window" -c "$root" "$cmd"
@@ -552,6 +575,15 @@ stop_metro() {
   if [ -n "$(printf '%s' "$pids" | tr -d ' ')" ]; then
     log "Stopping Metro on port ${WATCHER_PORT}: $pids"
     kill $pids 2>/dev/null || true
+    for _ in $(seq 1 20); do
+      pids="$(lsof -nP -iTCP:${WATCHER_PORT:-8081} -sTCP:LISTEN -t 2>/dev/null | tr '\n' ' ' || true)"
+      [ -z "$pids" ] && break
+      sleep 0.25
+    done
+    if [ -n "$(printf '%s' "$pids" | tr -d ' ')" ]; then
+      log "Metro listener still held on port ${WATCHER_PORT}; forcing: $pids"
+      kill -KILL $pids 2>/dev/null || true
+    fi
   else
     log "No Metro listener on port ${WATCHER_PORT:-8081}"
   fi
