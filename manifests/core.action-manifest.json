@@ -724,7 +724,7 @@
   {
    "name": "metamask.perps.close_orders",
    "owner": "metamask",
-   "description": "core Testnet only (the headless core adapter never mutates mainnet).Cancel selected live Perps open orders. Use selector/mode params to cancel matching symbols or all orders.",
+   "description": "core Default to testnet for Perps mutations; mainnet is read-only unless explicitly requested.Cancel selected live Perps open orders. Use selector/mode params to cancel matching symbols or all orders.",
    "schema": {
     "type": "object",
     "properties": {
@@ -892,7 +892,7 @@
   {
    "name": "metamask.perps.ensure_orders",
    "owner": "metamask",
-   "description": "core Testnet only (the headless core adapter never mutates mainnet).Higher-level wrapper that reads selected orders, cancels when needed, then asserts final order state.",
+   "description": "core Default to testnet for Perps mutations; mainnet is read-only unless explicitly requested.Higher-level wrapper that reads selected orders, cancels when needed, then asserts final order state.",
    "schema": {
     "type": "object",
     "properties": {
@@ -978,7 +978,7 @@
   {
    "name": "metamask.perps.start_state",
    "owner": "metamask",
-   "description": "core Testnet only (the headless core adapter never mutates mainnet).Recommended configurable Perps start state that composes reusable domain operations before the proof window. Headless: converges POSITION and ORDER baselines on testnet via the controller; no navigation/page/HUD.",
+   "description": "core Default to testnet for Perps mutations; mainnet is read-only unless explicitly requested.Recommended configurable Perps start state that composes reusable domain operations before the proof window. Headless: converges POSITION and ORDER baselines on testnet via the controller; no navigation/page/HUD.",
    "schema": {
     "type": "object",
     "properties": {
@@ -999,7 +999,8 @@
      "network": {
       "type": "string",
       "enum": [
-       "testnet"
+       "testnet",
+       "mainnet"
       ]
      },
      "market": {
@@ -1111,7 +1112,8 @@
      "network": {
       "type": "string",
       "enum": [
-       "testnet"
+       "testnet",
+       "mainnet"
       ]
      },
      "market": {

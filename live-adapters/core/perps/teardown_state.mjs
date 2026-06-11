@@ -1,4 +1,4 @@
-import { isDirectRun, runAdapter } from './_controller.mjs';
+import { isDirectRun, resolveNetwork, runAdapter } from './_controller.mjs';
 import { ensureOrders } from './ensure_orders.mjs';
 import { ensurePositions } from './ensure_positions.mjs';
 
@@ -56,7 +56,7 @@ function normalizeBaseline(value, label) {
 }
 
 export async function teardownState(input) {
-  const network = String(input.node?.network ?? 'testnet').toLowerCase();
+  const network = resolveNetwork(input);
   const ordersBaseline = normalizeBaseline(input.node?.orders, 'orders');
   const positionsBaseline = normalizeBaseline(input.node?.positions, 'positions');
 

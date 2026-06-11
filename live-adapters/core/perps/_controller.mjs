@@ -276,6 +276,22 @@ async function requireAccountAddress(input) {
 let cached = null;
 
 /**
+ * Resolve the requested network. Default testnet; mainnet only when a node
+ * explicitly sets network: "mainnet". Mainnet reads are safe; mainnet mutations
+ * use REAL funds and must be explicitly requested — mirrors the extension/mobile
+ * "mainnet is read-only unless explicitly requested" contract.
+ */
+export function resolveNetwork(input) {
+  const raw = String(input.node?.network ?? 'testnet').toLowerCase();
+  if (raw !== 'testnet' && raw !== 'mainnet') {
+    throw new Error(
+      `core perps network must be "testnet" or "mainnet", got "${input.node?.network}".`,
+    );
+  }
+  return raw;
+}
+
+/**
  * Instantiate the PerpsController headlessly against the resolved core checkout.
  * Returns the controller plus the resolved read account address. Cached per
  * process so repeated reads in one adapter invocation reuse one controller.
@@ -284,8 +300,9 @@ export async function getCoreController(input) {
   const projectRoot = input.context?.projectRoot;
   if (!projectRoot) throw new Error('core adapter requires context.projectRoot.');
   const accountAddress = await requireAccountAddress(input);
+  const network = resolveNetwork(input);
 
-  if (cached && cached.projectRoot === projectRoot) {
+  if (cached && cached.projectRoot === projectRoot && cached.network === network) {
     return { ...cached, accountAddress };
   }
 
@@ -311,15 +328,17 @@ export async function getCoreController(input) {
     parent: rootMessenger,
   });
 
-  // Slice 1 forces testnet; never instantiate against mainnet for proof runs.
+  // Default testnet. Mainnet only on explicit node.network: "mainnet" — mainnet
+  // reads are safe; mainnet mutations use real funds (gated in getCoreControllerWithSigner).
+  const isTestnet = network === 'testnet';
   const controller = new PerpsController({
     messenger,
-    state: { isTestnet: true },
+    state: { isTestnet },
     infrastructure,
   });
 
-  if (controller.state.isTestnet !== true) {
-    throw new Error('core perps controller did not initialize in testnet mode.');
+  if (controller.state.isTestnet !== isTestnet) {
+    throw new Error(`core perps controller did not initialize in ${network} mode.`);
   }
 
   const stubbedHandlers = Array.from(stubbed);
@@ -330,7 +349,19 @@ export async function getCoreController(input) {
     );
   }
 
-  cached = { controller, messenger, rootMessenger, projectRoot, network: 'testnet' };
+  // If a controller from a different network/checkout is cached in this process,
+  // disconnect it (close its HL WebSocket) before replacing — a superseded
+  // controller would otherwise leak its socket and keep the event loop alive.
+  if (cached?.controller && typeof cached.controller.disconnect === 'function') {
+    try {
+      await cached.controller.disconnect();
+    } catch (error) {
+      process.stderr.write(
+        `[core/perps] failed to disconnect superseded controller: ${fmtError(error)}\n`,
+      );
+    }
+  }
+  cached = { controller, messenger, rootMessenger, projectRoot, network };
   return { ...cached, accountAddress };
 }
 
@@ -454,12 +485,18 @@ export async function getCoreControllerWithSigner(input) {
     throw new Error('core perps controller exposes no messenger pair for signing.');
   }
 
-  // Core is testnet-only. A recipe that explicitly requests another network must
-  // fail loudly rather than run on testnet while mislabeling its output network.
-  const requestedNetwork = String(input.node?.network ?? 'testnet').toLowerCase();
-  if (requestedNetwork !== 'testnet') {
-    throw new Error(
-      `core perps adapter is testnet-only; refusing requested network "${input.node.network}".`,
+  // Default testnet. A mutation on mainnet uses REAL funds, so it is gated TWICE:
+  // the recipe node must explicitly set network: "mainnet" (resolveNetwork), AND a
+  // human must opt in via CORE_PERPS_ALLOW_MAINNET_WRITES=1 — so a copy-pasted recipe
+  // alone cannot move real money on a dev/CI box.
+  if (base.network === 'mainnet') {
+    if (process.env.CORE_PERPS_ALLOW_MAINNET_WRITES !== '1') {
+      throw new Error(
+        'core perps refuses a MAINNET write: set CORE_PERPS_ALLOW_MAINNET_WRITES=1 to confirm signing with REAL funds.',
+      );
+    }
+    process.stderr.write(
+      '[core/perps] WARNING: signing a MAINNET perps action with REAL funds (network=mainnet + CORE_PERPS_ALLOW_MAINNET_WRITES=1)\n',
     );
   }
 
@@ -472,8 +509,9 @@ export async function getCoreControllerWithSigner(input) {
   // cached), so repeated write adapters in one run reuse the same provider.
   await controller.init();
 
-  if (controller.state.isTestnet !== true) {
-    throw new Error('core perps controller is not in testnet mode; refusing to sign writes.');
+  const wantTestnet = base.network === 'testnet';
+  if (controller.state.isTestnet !== wantTestnet) {
+    throw new Error(`core perps controller is not in ${base.network} mode; refusing to sign.`);
   }
 
   return { ...base, signerAddress };
