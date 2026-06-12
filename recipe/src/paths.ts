@@ -124,7 +124,7 @@ export function manifestPath(adapter: MetaMaskRecipeAdapter) {
 }
 
 export function recipePath(name: string) {
-  return path.join(runnerDir, 'recipes', name);
+  return path.join(runnerDir, 'library/recipes', name);
 }
 
 export function readJson(file: string): unknown {

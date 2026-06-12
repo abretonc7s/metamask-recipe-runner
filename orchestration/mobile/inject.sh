@@ -182,8 +182,8 @@ install_v1_runner_assets() {
   cp "$METAMASK_RUNNER_DIR/library/manifests/mobile.action-manifest.json" "$HARNESS_DIR/action-manifest.json"
   cp "$METAMASK_RUNNER_DIR/library/manifests/mobile.action-manifest.json" "$HARNESS_DIR/runner/manifests/mobile.action-manifest.json"
   cp "$METAMASK_RUNNER_DIR/library/manifests/extension.action-manifest.json" "$HARNESS_DIR/runner/manifests/extension.action-manifest.json"
-  if [ -d "$METAMASK_RUNNER_DIR/recipes" ]; then
-    rsync -a --delete "$METAMASK_RUNNER_DIR/recipes/" "$HARNESS_DIR/runner/recipes/"
+  if [ -d "$METAMASK_RUNNER_DIR/library/recipes" ]; then
+    rsync -a --delete "$METAMASK_RUNNER_DIR/library/recipes/" "$HARNESS_DIR/runner/recipes/"
   fi
   if [ -d "$METAMASK_RUNNER_DIR/scripts/mobile" ]; then
     rsync -a --delete "$METAMASK_RUNNER_DIR/scripts/mobile/" "$HARNESS_DIR/scripts/"

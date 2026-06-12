@@ -102,8 +102,8 @@ install_v1_runner_assets() {
   cp "$METAMASK_RUNNER_DIR/library/manifests/core.action-manifest.json" "$HARNESS_DIR/runner/manifests/core.action-manifest.json"
   cp "$METAMASK_RUNNER_DIR/library/manifests/mobile.action-manifest.json" "$HARNESS_DIR/runner/manifests/mobile.action-manifest.json"
   cp "$METAMASK_RUNNER_DIR/library/manifests/extension.action-manifest.json" "$HARNESS_DIR/runner/manifests/extension.action-manifest.json"
-  if [ -d "$METAMASK_RUNNER_DIR/recipes" ]; then
-    rsync -a --delete "$METAMASK_RUNNER_DIR/recipes/" "$HARNESS_DIR/runner/recipes/"
+  if [ -d "$METAMASK_RUNNER_DIR/library/recipes" ]; then
+    rsync -a --delete "$METAMASK_RUNNER_DIR/library/recipes/" "$HARNESS_DIR/runner/recipes/"
   fi
   if [ ! -x "$HARNESS_DIR/runner/bin/metamask-recipe" ]; then
     echo "Refusing core recipe harness install: failed to make runner executable." >&2

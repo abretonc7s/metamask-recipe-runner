@@ -119,7 +119,7 @@ function disallowPlainSourceJs() {
 }
 
 function validateCommittedRecipes() {
-  const recipeDir = path.join(runnerDir, 'recipes');
+  const recipeDir = path.join(runnerDir, 'library/recipes');
   const recipes = listFiles(recipeDir, (name) => name.endsWith('.recipe.json'));
   const manifests = {
     mobile: readJson(
