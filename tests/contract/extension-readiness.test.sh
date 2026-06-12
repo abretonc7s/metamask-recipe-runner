@@ -1,11 +1,11 @@
 #!/bin/bash
-# Contract test: recipe/extension/extension-readiness.mjs
+# Contract test: orchestration/extension/readiness.mjs
 # No Chrome: dist-file readiness paths only (CDP checks need a live browser).
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/helpers.sh"
 ct_init
 
-RD="$CT_REPO_ROOT/recipe/extension/extension-readiness.mjs"
+RD="$CT_REPO_ROOT/orchestration/extension/readiness.mjs"
 
 # --help exits 0
 ct_run 0 timeout 60 node "$RD" --help

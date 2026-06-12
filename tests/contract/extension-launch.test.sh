@@ -27,7 +27,7 @@ mkdir -p "$INST/lib"
 cp "$LAUNCH" "$INST/launch.sh"
 cp "$CT_REPO_ROOT/orchestration/lib/harness-path.sh" "$INST/lib/"
 cp "$CT_REPO_ROOT/orchestration/lib/path-defaults.json" "$INST/lib/"
-cat > "$INST/extension-readiness.mjs" <<'MJS'
+cat > "$INST/readiness.mjs" <<'MJS'
 #!/usr/bin/env node
 console.log(JSON.stringify({ status: 'pass', stub: true }));
 MJS

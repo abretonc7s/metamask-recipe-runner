@@ -1,6 +1,7 @@
-// extension-id.ts — deterministic extension id resolution (recipe tree;
-// formerly src/extension-id.ts). Product control: derives the id from the
-// loaded dist manifest key.
+// extension-id.ts — deterministic extension (CRX) id resolution.
+// (formerly: src/extension-id.ts, recipe/extension/extension-id.ts)
+// App control: derives the id from the loaded dist manifest key. Name keeps
+// the extension- prefix: this is the CRX id, not an instance/slot id.
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';

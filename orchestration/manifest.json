@@ -115,6 +115,62 @@
       "outputs": "removes <harness>/extension; exit 0/2"
     },
     {
+      "id": "extension/sidepanel-toggle",
+      "entry": "orchestration/extension/sidepanel-toggle.sh",
+      "kind": "bash",
+      "purpose": "Window-mode control for the extension instance: chrome.sidePanel status/open/close/toggle/cycle over the instance's CDP port.",
+      "inputs": "<status|open|close|toggle|cycle> --cdp-port --ext-id --agent-dir --settle-ms; env REPO, CDP_PORT, EXT_ID, SETTLE_MS, AGENT_DIR",
+      "outputs": "status/progress on stdout; exit 0/1/2"
+    },
+    {
+      "id": "extension/readiness",
+      "entry": "orchestration/extension/readiness.mjs",
+      "kind": "node",
+      "purpose": "Health probe for one extension instance: dist entry files + live CDP target, repairs <runtime-dir>/extension.id.",
+      "inputs": "--target --cdp-port --json; env RECIPE_RUNTIME_DIR",
+      "outputs": "readiness report on stdout; exit 0 ready / non-zero"
+    },
+    {
+      "id": "extension/wallet-fixture-state",
+      "entry": "orchestration/extension/wallet-fixture-state.cjs",
+      "kind": "node",
+      "purpose": "Instance wallet state: generate deterministic state from a fixture, prefill the Chrome profile, seed/validate over CDP.",
+      "inputs": "generate|prefill-profile|seed-cdp + flags per usage(); env RECIPE_RUNTIME_DIR",
+      "outputs": "--out/--state JSON files; exit 0/1/2"
+    },
+    {
+      "id": "extension/extension-id",
+      "entry": "orchestration/extension/extension-id.ts",
+      "kind": "module",
+      "purpose": "Deterministic CRX id resolution from the loaded dist manifest key (TS module used by the runner CLI).",
+      "inputs": "resolveExtensionId(target)",
+      "outputs": "extension id string"
+    },
+    {
+      "id": "extension/ensure-ready",
+      "entry": "orchestration/extension/ensure-ready.ts",
+      "kind": "module",
+      "purpose": "Ensure the extension runtime is attachable (TS module used by the runner CLI).",
+      "inputs": "ensureExtensionReady(...)",
+      "outputs": "readiness result"
+    },
+    {
+      "id": "extension/runtime",
+      "entry": "orchestration/extension/runtime.ts",
+      "kind": "module",
+      "purpose": "Extension runtime prepare/health over CDP (TS module used by the runner CLI).",
+      "inputs": "prepareExtensionRuntime/checkExtensionRuntimeHealth",
+      "outputs": "runtime state"
+    },
+    {
+      "id": "extension/runtime-decision",
+      "entry": "orchestration/extension/runtime-decision.ts",
+      "kind": "module",
+      "purpose": "Cache/deps baseline + readiness decision (TS module used by the runner CLI).",
+      "inputs": "decideExtensionReadiness(...)",
+      "outputs": "decision record"
+    },
+    {
       "id": "core/inject",
       "entry": "orchestration/core/inject.sh",
       "kind": "bash",

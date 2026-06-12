@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# sidepanel-toggle.sh — open/close the MetaMask Chrome side panel for this slot.
-# (formerly: scripts/extension/sidepanel-toggle.sh)
+# sidepanel-toggle.sh — window-mode control for the extension instance.
+# (formerly: scripts/extension/sidepanel-toggle.sh, recipe/extension/...)
 #
 # Purpose:
-#   Recipe-tree product control: drives chrome.sidePanel for ONE slot's CDP
+#   App control: drives chrome.sidePanel for one extension instance's CDP
 #   browser (status/open/close/toggle/cycle) without global shortcuts.
 #
 # Inputs: subcommand (status|open|close|toggle|cycle, default status);
@@ -12,8 +12,8 @@
 # Outputs: status/progress lines on stdout.
 #   Exit 0 — action done; 1 — repo/args missing or action failed;
 #   2 — non-numeric port / CDP unreachable.
-# Never touches: other slots' browsers (single CDP port scope); the dist
-#   build (read-only).
+# Never touches: other instances' browsers (single CDP port scope); the
+#   dist build (read-only).
 #
 # Usage:
 #   bash sidepanel-toggle.sh status --cdp-port 6663

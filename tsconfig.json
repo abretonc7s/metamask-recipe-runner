@@ -12,6 +12,7 @@
   },
   "include": [
     "recipe/**/*.ts",
+    "orchestration/**/*.ts",
     "library/**/*.mjs",
     "scripts/**/*.mjs"
   ]

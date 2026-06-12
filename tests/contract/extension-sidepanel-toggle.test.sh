@@ -1,11 +1,11 @@
 #!/bin/bash
-# Contract test: recipe/extension/sidepanel-toggle.sh
+# Contract test: orchestration/extension/sidepanel-toggle.sh
 # No Chrome: exercises the documented arg/preflight contract.
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/helpers.sh"
 ct_init
 
-SP="$CT_REPO_ROOT/recipe/extension/sidepanel-toggle.sh"
+SP="$CT_REPO_ROOT/orchestration/extension/sidepanel-toggle.sh"
 
 # --help exits 0 (handled before repo resolution)
 ct_run 0 timeout 60 bash "$SP" --help

@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 // wallet-fixture-state.cjs — wallet fixture state generate/prefill/seed
-// (formerly: scripts/extension/wallet-fixture-state.cjs)
+// (formerly: scripts/extension/wallet-fixture-state.cjs,
+//  recipe/extension/wallet-fixture-state.cjs)
 //
 // Purpose:
-//   Recipe-tree product control: derives deterministic wallet state from a
+//   App control (instance wallet state): derives deterministic wallet state from a
 //   fixture (generate), prefills a Chrome profile before launch
 //   (prefill-profile), and validates/seeds the live wallet over CDP
 //   (seed-cdp).

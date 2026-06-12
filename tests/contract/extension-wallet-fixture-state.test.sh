@@ -1,11 +1,11 @@
 #!/bin/bash
-# Contract test: recipe/extension/wallet-fixture-state.cjs
+# Contract test: orchestration/extension/wallet-fixture-state.cjs
 # generate path only (prefill/seed need a Chrome profile / live CDP).
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/helpers.sh"
 ct_init
 
-WF="$CT_REPO_ROOT/recipe/extension/wallet-fixture-state.cjs"
+WF="$CT_REPO_ROOT/orchestration/extension/wallet-fixture-state.cjs"
 
 # --help exits 0
 ct_run 0 timeout 60 node "$WF" --help

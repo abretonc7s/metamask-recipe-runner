@@ -54,15 +54,9 @@ if ! command -v harness_root >/dev/null 2>&1; then
   echo "metamask-recipe: shared lib orchestration/lib/harness-path.sh not found; reinstall the runner." >&2
   exit 1
 fi
-# extension-readiness is a recipe-tree feature: co-located in installed
-# copies, under recipe/extension in a repo checkout.
-READINESS_MJS=""
-for _r in "$SCRIPT_DIR/extension-readiness.mjs" "$SCRIPT_DIR/../../recipe/extension/extension-readiness.mjs"; do
-  [ -f "$_r" ] && { READINESS_MJS="$_r"; break; }
-done
-unset _r
-if [ -z "$READINESS_MJS" ]; then
-  echo "metamask-recipe: extension-readiness.mjs not found next to $SCRIPT_DIR; reinstall the runner." >&2
+READINESS_MJS="$SCRIPT_DIR/readiness.mjs"
+if [ ! -f "$READINESS_MJS" ]; then
+  echo "metamask-recipe: readiness.mjs not found next to $SCRIPT_DIR; reinstall the runner." >&2
   exit 1
 fi
 TARGET="$(cd "$TARGET" && pwd)"

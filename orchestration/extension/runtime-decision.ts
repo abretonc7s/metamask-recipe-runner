@@ -1,11 +1,12 @@
-// extension-runtime-decision.ts — cache/deps baseline + readiness decision
-// (recipe tree; formerly src/extension-runtime-decision.ts).
+// runtime-decision.ts — cache/deps baseline + readiness decision.
+// (formerly: src/extension-runtime-decision.ts,
+//  recipe/extension/extension-runtime-decision.ts) App/instance control.
 import { execFileSync } from 'node:child_process';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { recipeWatchLogCandidates } from '../src/paths.ts';
+import { recipeWatchLogCandidates } from '../../recipe/src/paths.ts';
 
 /**
  * Deterministic runtime-readiness decision for the MetaMask Extension.
@@ -343,7 +344,7 @@ async function cdpCheck(target: string, cdpPort?: number): Promise<CdpCheck> {
   try {
     // Lazy import: extension-runtime.ts loads the recipe harness at module
     // scope, so it must never be pulled into the no-browser decision path.
-    const { checkExtensionRuntimeHealth } = await import('./extension-runtime.ts');
+    const { checkExtensionRuntimeHealth } = await import('./runtime.ts');
     const report = await checkExtensionRuntimeHealth(target, cdpPort);
     return report.status === 'PASS'
       ? { status: 'pass' }

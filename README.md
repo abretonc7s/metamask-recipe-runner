@@ -31,8 +31,9 @@ metamask-recipe prepare   # runtime/orchestration: app is ready
 metamask-recipe run       # recipe/proof: actions execute and evidence is saved
 ```
 
-Do not mix those layers. Shell helpers may launch apps and check readiness; they
-should not define recipe semantics.
+Do not mix those layers. recipe/ = define, execute, verify, and evidence
+proofs. orchestration/ = control the app and its instances (start, windows,
+wallet state, health, ports, parallel).
 
 ## Useful commands
 
@@ -53,10 +54,11 @@ metamask-recipe ensure-ready --adapter extension --target <extension> --cdp-port
 
 ```text
 bin/            CLI and platform convenience commands
-recipe/         prove one change on ONE instance: typed runner core
-                (recipe/src) + per-platform product control and verify
-orchestration/  run MANY instances + delivery: launch/live/watch/inject/
-                cleanup per platform, shared lib, manifest.json + doctor.mjs
+recipe/         the proof system only: engine glue (recipe/src) +
+                per-platform verify (define, execute, verify, evidence)
+orchestration/  ALL app & instance control: launch/live/watch/windows/
+                wallet state/health/inject/cleanup per platform, shared
+                lib, manifest.json + doctor.mjs
 library/        content: actions/ (per-platform action implementations),
                 manifests/ (action manifests), recipes/ (reusable recipes)
 scripts/        dev tooling (yarn check, local farmslot link, e2e validation)

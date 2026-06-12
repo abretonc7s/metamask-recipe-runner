@@ -86,7 +86,7 @@ describes **how an agent should work**, it belongs in skills.
 | `orchestration/mobile/inject.sh` | Installs/syncs the Mobile runtime overlay under the configured harness root and protects cleanup/git-exclude behavior. |
 | `orchestration/extension/inject.mjs` | Installs/syncs Extension runtime helpers under the configured harness root. |
 | `orchestration/mobile/` + `recipe/mobile/` | Runner-owned Mobile launch/live/inject/cleanup and verify helpers copied into installed harnesses. |
-| `orchestration/extension/` + `recipe/extension/` | Runner-owned Extension launch/live/watch/browser and verify/readiness helpers copied into installed harnesses. |
+| `orchestration/extension/` + `recipe/extension/` | Runner-owned Extension launch/live/watch/windows/wallet-state/readiness helpers (orchestration) and verify (recipe) copied into installed harnesses. |
 | `orchestration/lib/path-defaults.json` | Single source for default `recipeHarnessRoot` and `recipeRuntimeDir`. |
 | `orchestration/lib/harness-path.sh`, `orchestration/lib/recipe-paths.mjs`, `recipe/src/paths.ts` | Shell, standalone Node, and TypeScript accessors for those defaults plus validation. |
 | `library/recipes/` | Reusable smoke/action-validation recipes only. Task-specific proof recipes stay task-local. |

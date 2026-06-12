@@ -105,13 +105,10 @@ resolve_fixture_script() {
     printf '%s' "$FIXTURE_SCRIPT"
     return 0
   fi
-  local cand
-  for cand in \
-    "$SCRIPT_DIR/wallet-fixture-state.cjs" \
-    "$SCRIPT_DIR/../../recipe/extension/wallet-fixture-state.cjs"
-  do
-    [ -f "$cand" ] && { printf '%s' "$cand"; return 0; }
-  done
+  if [ -f "$SCRIPT_DIR/wallet-fixture-state.cjs" ]; then
+    printf '%s' "$SCRIPT_DIR/wallet-fixture-state.cjs"
+    return 0
+  fi
   echo "seed-fixture: wallet-fixture-state.cjs not found next to $SCRIPT_DIR; reinstall the runner." >&2
   exit 1
 }

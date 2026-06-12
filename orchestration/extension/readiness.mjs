@@ -1,9 +1,10 @@
 #!/usr/bin/env node
-// extension-readiness.mjs — readiness probe for one extension slot
-// (formerly: scripts/extension/extension-readiness.mjs)
+// readiness.mjs — health probe for one extension instance
+// (formerly: scripts/extension/extension-readiness.mjs,
+//  recipe/extension/extension-readiness.mjs)
 //
 // Purpose:
-//   Recipe-tree readiness check: verifies the dist build's expected entry
+//   App-control health probe: verifies the dist build's expected entry
 //   files and (with --cdp-port) the live extension target over CDP,
 //   repairing <runtime-dir>/extension.id when the runtime disagrees.
 //
@@ -51,7 +52,7 @@ function parseArgs(argv) {
     } else if (arg === '--json') {
       out.json = true;
     } else if (arg === '-h' || arg === '--help') {
-      console.log('Usage: extension-readiness.mjs --target <metamask-extension> [--cdp-port <port>] [--json]');
+      console.log('Usage: readiness.mjs --target <metamask-extension> [--cdp-port <port>] [--json]');
       process.exit(0);
     } else {
       throw new Error(`Unknown arg: ${arg}`);

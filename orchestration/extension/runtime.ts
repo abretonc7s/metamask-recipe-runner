@@ -1,10 +1,11 @@
-// extension-runtime.ts — extension runtime prepare/health over CDP
-// (recipe tree; formerly src/extension-runtime.ts).
+// runtime.ts — extension runtime prepare/health over CDP.
+// (formerly: src/extension-runtime.ts, recipe/extension/extension-runtime.ts)
+// App/instance control.
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { importRecipeHarnessRuntimeBrowserExtension, importRecipeHarnessRuntimeCdp, recipeRuntimeDir, resolveLocalProtocolRoot, resolveRequiredLocalProtocolRoot, runnerDir } from '../src/paths.ts';
+import { importRecipeHarnessRuntimeBrowserExtension, importRecipeHarnessRuntimeCdp, recipeRuntimeDir, resolveLocalProtocolRoot, resolveRequiredLocalProtocolRoot, runnerDir } from '../../recipe/src/paths.ts';
 
 // Runtime health uses package dependencies. Launching a host-managed validation
 // browser remains a dev-only path because it needs pool/project scripts from a

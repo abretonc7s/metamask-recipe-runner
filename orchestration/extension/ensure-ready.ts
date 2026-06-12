@@ -1,5 +1,6 @@
-// extension-ensure-ready.ts — ensure the extension runtime is attachable
-// (recipe tree; formerly src/extension-ensure-ready.ts).
+// ensure-ready.ts — ensure the extension runtime is attachable.
+// (formerly: src/extension-ensure-ready.ts,
+//  recipe/extension/extension-ensure-ready.ts) App/instance control.
 import path from 'node:path';
 
 import { resolveExtensionId } from './extension-id.ts';
@@ -135,7 +136,7 @@ export async function ensureExtensionReady(
   // any no-CDP path.
   let health: EnsureReadyResult['health'] = { status: 'unknown', findings: [] };
   try {
-    const { checkExtensionRuntimeHealth } = await import('./extension-runtime.ts');
+    const { checkExtensionRuntimeHealth } = await import('./runtime.ts');
     const report = await checkExtensionRuntimeHealth(resolved, cdpPort);
     health = { status: report.status, findings: report.findings };
   } catch (error) {

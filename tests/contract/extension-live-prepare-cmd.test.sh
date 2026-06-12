@@ -30,7 +30,7 @@ cp "$CT_REPO_ROOT/orchestration/extension/launch-browser.cjs" "$INST/"
 cp "$CT_REPO_ROOT/orchestration/extension/start-watch.sh" "$INST/"
 cp "$CT_REPO_ROOT/orchestration/extension/snapshot-dist.sh" "$INST/"
 cp "$CT_REPO_ROOT/orchestration/extension/seed-fixture.sh" "$INST/"
-cp "$CT_REPO_ROOT/recipe/extension/wallet-fixture-state.cjs" "$INST/wallet-fixture-state.cjs"
+cp "$CT_REPO_ROOT/orchestration/extension/wallet-fixture-state.cjs" "$INST/wallet-fixture-state.cjs"
 cat > "$INST/launch.sh" <<SH
 #!/bin/bash
 prev=""

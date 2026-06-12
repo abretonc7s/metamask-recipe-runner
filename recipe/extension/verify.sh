@@ -121,6 +121,17 @@ if ! command -v read_runtime_context_field >/dev/null 2>&1; then
   echo "extension verify: json-field helper missing (orchestration/lib/json-field.sh). Run metamask-recipe extension prepare --target $TARGET" >&2
   exit 1
 fi
+# readiness probe is app control: co-located in installed copies, under
+# orchestration/extension in a repo checkout.
+READINESS_MJS=""
+for _r in "$SCRIPT_DIR/readiness.mjs" "$SCRIPT_DIR/../../orchestration/extension/readiness.mjs"; do
+  [ -f "$_r" ] && { READINESS_MJS="$_r"; break; }
+done
+unset _r
+if [ -z "$READINESS_MJS" ]; then
+  echo "extension verify: readiness.mjs missing next to $SCRIPT_DIR; reinstall the runner." >&2
+  exit 1
+fi
 refresh_extension_id() {
   if [ -f "$EXTENSION_ID_FILE" ]; then
     RECIPE_HARNESS_EXTENSION_ID="$(tr -d '[:space:]' < "$EXTENSION_ID_FILE")"
@@ -375,7 +386,7 @@ if [ "$STATIC_ONLY" = false ]; then
   else
     live_mode="live"
     cdp_holder_json "$CDP_PORT" > "$ARTIFACTS/logs/cdp-holder.json"
-    if node "$SCRIPT_DIR/extension-readiness.mjs" --target "$TARGET" --cdp-port "$CDP_PORT" --json > "$ARTIFACTS/logs/extension-readiness.json" 2>&1; then
+    if node "$READINESS_MJS" --target "$TARGET" --cdp-port "$CDP_PORT" --json > "$ARTIFACTS/logs/extension-readiness.json" 2>&1; then
       checks+=("{\"name\":\"live extension readiness\",\"status\":\"pass\"}")
       # extension-readiness.mjs may repair $RUNTIME_DIR/extension.id when the
       # supplied Chrome profile loads a fresh extension ID. Reload it before
