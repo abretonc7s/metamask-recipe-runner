@@ -36,7 +36,7 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 runner="$script_dir/metamask-recipe"
 runner_root="$(cd "$script_dir/.." && pwd -P)"
 # shellcheck disable=SC1091
-. "$runner_root/scripts/lib/harness-path.sh"
+. "$runner_root/orchestration/lib/harness-path.sh"
 bridge="$runner_root/live-adapters/mobile/bridge-runtime/cdp-bridge.cjs"
 setup_wallet_script="$runner_root/live-adapters/mobile/bridge-runtime/setup-wallet.sh"
 
