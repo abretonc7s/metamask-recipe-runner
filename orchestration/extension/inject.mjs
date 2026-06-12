@@ -91,6 +91,7 @@ copyFile(path.join(runnerDir, 'orchestration/extension/start-watch.sh'), path.jo
 copyFile(path.join(runnerDir, 'orchestration/extension/snapshot-dist.sh'), path.join(harnessDir, 'scripts/snapshot-dist.sh'));
 copyFile(path.join(runnerDir, 'orchestration/extension/seed-fixture.sh'), path.join(harnessDir, 'scripts/seed-fixture.sh'));
 copyFile(path.join(runnerDir, 'recipe/extension/sidepanel-toggle.sh'), path.join(harnessDir, 'scripts/sidepanel-toggle.sh'));
+copyFile(path.join(runnerDir, 'recipe/extension/extension-readiness.mjs'), path.join(harnessDir, 'scripts/extension-readiness.mjs'));
 copyFile(path.join(runnerDir, 'orchestration/extension/refresh-build.sh'), path.join(harnessDir, 'scripts/refresh-build.sh'));
 copyFile(path.join(runnerDir, 'orchestration/extension/reopen-browser.sh'), path.join(harnessDir, 'scripts/reopen-browser.sh'));
 copyFile(path.join(runnerDir, 'orchestration/lib/harness-path.sh'), path.join(harnessDir, 'scripts/lib/harness-path.sh'));
