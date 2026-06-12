@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import process from 'node:process';
-import { recipeHarnessRoot } from './lib/recipe-paths.mjs';
+import { recipeHarnessRoot } from '../orchestration/lib/recipe-paths.mjs';
 
 function usage() { console.error('Usage: cleanup-extension-harness.mjs [--target <metamask-extension>]'); }
 let target = process.cwd();

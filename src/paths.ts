@@ -26,7 +26,7 @@ export function recipeHarnessRoot() {
 
 
 function readPathDefaults(): { recipeRuntimeDir: string; recipeHarnessRoot: string } {
-  const defaultsPath = path.join(runnerDir, 'scripts/lib/path-defaults.json');
+  const defaultsPath = path.join(runnerDir, 'orchestration/lib/path-defaults.json');
   const parsed = JSON.parse(fs.readFileSync(defaultsPath, 'utf8')) as Partial<{ recipeRuntimeDir: string; recipeHarnessRoot: string }>;
   return {
     recipeRuntimeDir: validateRelativeRecipePath('recipeRuntimeDir', parsed.recipeRuntimeDir || ''),

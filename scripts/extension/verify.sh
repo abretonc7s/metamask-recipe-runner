@@ -61,7 +61,7 @@ EXTENSION_ID_FILE="$TARGET/$RUNTIME_DIR/extension.id"
 # Shared JSON reader: $SCRIPT_DIR/lib when running from the installed copy,
 # else the runner canonical at scripts/lib.
 # shellcheck disable=SC1091
-for _lib in "$SCRIPT_DIR/lib/json-field.sh" "$SCRIPT_DIR/../lib/json-field.sh" "$SCRIPT_DIR/../../../scripts/lib/json-field.sh"; do
+for _lib in "$SCRIPT_DIR/lib/json-field.sh" "$SCRIPT_DIR/../../orchestration/lib/json-field.sh" "$SCRIPT_DIR/../lib/json-field.sh" "$SCRIPT_DIR/../../../scripts/lib/json-field.sh"; do
   [ -f "$_lib" ] && { . "$_lib"; break; }
 done
 unset _lib

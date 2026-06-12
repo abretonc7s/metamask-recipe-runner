@@ -27,6 +27,7 @@ function pathDefault(key) {
   for (const candidate of [
     path.join(__dirname, 'lib/path-defaults.json'),
     path.join(__dirname, '../lib/path-defaults.json'),
+    path.join(__dirname, '../../orchestration/lib/path-defaults.json'),
   ]) {
     if (!fs.existsSync(candidate)) continue;
     const value = JSON.parse(fs.readFileSync(candidate, 'utf8'))[key];

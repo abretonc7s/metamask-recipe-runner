@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import process from 'node:process';
-import { recipeHarnessRoot } from './lib/recipe-paths.mjs';
+import { recipeHarnessRoot } from '../orchestration/lib/recipe-paths.mjs';
 
 function usage() {
   console.error('Usage: inject-extension-harness.mjs [--target <metamask-extension>] [--no-git-exclude]');
@@ -61,10 +61,10 @@ copyFile(path.join(runnerDir, 'manifests/extension.action-manifest.json'), path.
 copyFile(path.join(runnerDir, 'manifests/extension.action-manifest.json'), path.join(harnessDir, 'action-manifest.json'));
 copyDir(path.join(runnerDir, 'recipes'), path.join(harnessDir, 'runner/recipes'));
 copyDir(path.join(runnerDir, 'scripts/extension'), path.join(harnessDir, 'scripts'));
-copyFile(path.join(runnerDir, 'scripts/lib/harness-path.sh'), path.join(harnessDir, 'scripts/lib/harness-path.sh'));
-copyFile(path.join(runnerDir, 'scripts/lib/path-defaults.json'), path.join(harnessDir, 'scripts/lib/path-defaults.json'));
-copyFile(path.join(runnerDir, 'scripts/lib/recipe-paths.mjs'), path.join(harnessDir, 'scripts/lib/recipe-paths.mjs'));
-copyFile(path.join(runnerDir, 'scripts/lib/json-field.sh'), path.join(harnessDir, 'scripts/lib/json-field.sh'));
+copyFile(path.join(runnerDir, 'orchestration/lib/harness-path.sh'), path.join(harnessDir, 'scripts/lib/harness-path.sh'));
+copyFile(path.join(runnerDir, 'orchestration/lib/path-defaults.json'), path.join(harnessDir, 'scripts/lib/path-defaults.json'));
+copyFile(path.join(runnerDir, 'orchestration/lib/recipe-paths.mjs'), path.join(harnessDir, 'scripts/lib/recipe-paths.mjs'));
+copyFile(path.join(runnerDir, 'orchestration/lib/json-field.sh'), path.join(harnessDir, 'scripts/lib/json-field.sh'));
 makeExecutableTree(path.join(harnessDir, 'scripts'));
 fs.writeFileSync(path.join(harnessDir, 'installed-scripts.sha256'), `${dirContentHash(path.join(harnessDir, 'scripts'))}\n`);
 

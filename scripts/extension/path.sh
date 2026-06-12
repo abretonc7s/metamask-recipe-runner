@@ -2,10 +2,10 @@
 
 # harness_root() / harness_dir() live in the shared lib so both adapters and the
 # wrapper share one definition. Source it from the installed co-located copy
-# ($SCRIPT_DIR/lib) else the runner canonical scripts/lib.
+# ($SCRIPT_DIR/lib) else the runner canonical orchestration/lib.
 _harness_path_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck disable=SC1091
-for _hp in "$_harness_path_dir/lib/harness-path.sh" "$_harness_path_dir/../lib/harness-path.sh" "$_harness_path_dir/../../../scripts/lib/harness-path.sh"; do
+for _hp in "$_harness_path_dir/lib/harness-path.sh" "$_harness_path_dir/../../orchestration/lib/harness-path.sh" "$_harness_path_dir/../lib/harness-path.sh" "$_harness_path_dir/../../../scripts/lib/harness-path.sh"; do
   [ -f "$_hp" ] && { . "$_hp"; break; }
 done
 unset _hp _harness_path_dir

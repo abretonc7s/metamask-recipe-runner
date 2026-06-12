@@ -160,9 +160,9 @@ install_v1_runner_assets() {
   if [ -d "$METAMASK_RUNNER_DIR/scripts/mobile" ]; then
     rsync -a --delete "$METAMASK_RUNNER_DIR/scripts/mobile/" "$HARNESS_DIR/scripts/"
     mkdir -p "$HARNESS_DIR/scripts/lib"
-    cp "$METAMASK_RUNNER_DIR/scripts/lib/harness-path.sh" "$HARNESS_DIR/scripts/lib/harness-path.sh"
-    cp "$METAMASK_RUNNER_DIR/scripts/lib/path-defaults.json" "$HARNESS_DIR/scripts/lib/path-defaults.json"
-    cp "$METAMASK_RUNNER_DIR/scripts/lib/recipe-paths.mjs" "$HARNESS_DIR/scripts/lib/recipe-paths.mjs"
+    cp "$METAMASK_RUNNER_DIR/orchestration/lib/harness-path.sh" "$HARNESS_DIR/scripts/lib/harness-path.sh"
+    cp "$METAMASK_RUNNER_DIR/orchestration/lib/path-defaults.json" "$HARNESS_DIR/scripts/lib/path-defaults.json"
+    cp "$METAMASK_RUNNER_DIR/orchestration/lib/recipe-paths.mjs" "$HARNESS_DIR/scripts/lib/recipe-paths.mjs"
     chmod -R u+rwX,go+rX "$HARNESS_DIR/scripts"
     find "$HARNESS_DIR/scripts" -type f \( -name '*.sh' -o -name '*.cjs' -o -name '*.mjs' \) -exec chmod +x {} +
   fi

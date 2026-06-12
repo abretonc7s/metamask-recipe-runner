@@ -34,7 +34,7 @@ done
 # Script lives at <repo>/<runtime_dir>/reopen-browser.sh
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck disable=SC1091
-for _hp in "$SCRIPT_DIR/lib/harness-path.sh" "$SCRIPT_DIR/../lib/harness-path.sh" "$SCRIPT_DIR/../../../scripts/lib/harness-path.sh"; do
+for _hp in "$SCRIPT_DIR/lib/harness-path.sh" "$SCRIPT_DIR/../../orchestration/lib/harness-path.sh" "$SCRIPT_DIR/../lib/harness-path.sh" "$SCRIPT_DIR/../../../scripts/lib/harness-path.sh"; do
   [ -f "$_hp" ] && { . "$_hp"; break; }
 done
 unset _hp
