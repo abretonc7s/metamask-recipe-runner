@@ -26,7 +26,7 @@ cp "$LIVE_SRC" "$INST/live.sh"
 cp "$CT_REPO_ROOT/orchestration/lib/harness-path.sh" "$INST/lib/"
 cp "$CT_REPO_ROOT/orchestration/lib/path-defaults.json" "$INST/lib/"
 cp "$CT_REPO_ROOT/orchestration/lib/json-field.sh" "$INST/lib/"
-cp "$CT_REPO_ROOT/orchestration/extension/launch-chrome-detached.cjs" "$INST/"
+cp "$CT_REPO_ROOT/orchestration/extension/launch-browser.cjs" "$INST/"
 cp "$CT_REPO_ROOT/orchestration/extension/start-watch.sh" "$INST/"
 cp "$CT_REPO_ROOT/orchestration/extension/snapshot-dist.sh" "$INST/"
 cp "$CT_REPO_ROOT/orchestration/extension/seed-fixture.sh" "$INST/"
@@ -83,7 +83,7 @@ fi
 # Equivalence with the pre-decomposition golden: same operation sequence.
 OLD_GOLDEN="$CT_REPO_ROOT/tests/contract/fixtures/prepare-cmd.golden"
 ct_assert_file "$OLD_GOLDEN"
-for marker in "start-watch.sh" "snapshot-dist.sh" "seed-fixture.sh prefill" "launch-chrome-detached.cjs" "json/version" "seed-fixture.sh seed-cdp"; do
+for marker in "start-watch.sh" "snapshot-dist.sh" "seed-fixture.sh prefill" "launch-browser.cjs" "json/version" "seed-fixture.sh seed-cdp"; do
   ct_assert_contains "$(cat "$GOLDEN")" "$marker"
 done
 # operations the old golden encoded inline must now live in the extracted scripts

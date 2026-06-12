@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-// launch-chrome-detached.cjs — per-instance isolated detached Chrome spawn
+// launch-browser.cjs — per-instance isolated detached Chrome spawn
+// (formerly: scripts/extension/launch-chrome-detached.cjs)
 //
 // Purpose:
 //   Spawns a detached Chrome bound to 127.0.0.1:<cdp-port> with its own
@@ -25,7 +26,7 @@ const { spawn } = require('node:child_process');
 
 if (process.argv.includes('--help') || process.argv.includes('-h')) {
   console.log(
-    'Usage: launch-chrome-detached.cjs --cdp-port <port> --chrome-bin <path> --profile <dir> --extension-dir <dist> --chrome-log <file> --chrome-pid <file>',
+    'Usage: launch-browser.cjs --cdp-port <port> --chrome-bin <path> --profile <dir> --extension-dir <dist> --chrome-log <file> --chrome-pid <file>',
   );
   process.exit(0);
 }

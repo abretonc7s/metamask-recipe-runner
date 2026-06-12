@@ -137,7 +137,7 @@ NODE
   quoted_seed_fixture="$(printf '%q' "$SCRIPT_DIR/seed-fixture.sh")"
   quoted_start_watch="$(printf '%q' "$SCRIPT_DIR/start-watch.sh")"
   quoted_snapshot_dist="$(printf '%q' "$SCRIPT_DIR/snapshot-dist.sh")"
-  quoted_chrome_launcher="$(printf '%q' "$SCRIPT_DIR/launch-chrome-detached.cjs")"
+  quoted_chrome_launcher="$(printf '%q' "$SCRIPT_DIR/launch-browser.cjs")"
   quoted_fixture_state="$(printf '%q' "$FIXTURE_STATE_ABS")"
   quoted_fixture_validation="$(printf '%q' "$FIXTURE_VALIDATION_ABS")"
   quoted_extension_id_file="$(printf '%q' "$TARGET/$RUNTIME_DIR/extension.id")"

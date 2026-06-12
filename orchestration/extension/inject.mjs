@@ -84,7 +84,9 @@ copyDir(path.join(runnerDir, 'recipes'), path.join(harnessDir, 'runner/recipes')
 copyDir(path.join(runnerDir, 'scripts/extension'), path.join(harnessDir, 'scripts'));
 // Moved features live in orchestration/; overwrite the forwarding shims so
 // the installed copy keeps the real scripts (same installed layout).
-copyFile(path.join(runnerDir, 'orchestration/extension/launch-chrome-detached.cjs'), path.join(harnessDir, 'scripts/launch-chrome-detached.cjs'));
+copyFile(path.join(runnerDir, 'orchestration/extension/launch-browser.cjs'), path.join(harnessDir, 'scripts/launch-browser.cjs'));
+// installed back-compat alias: callers of the pre-rename installed name
+copyFile(path.join(runnerDir, 'orchestration/extension/launch-browser.cjs'), path.join(harnessDir, 'scripts/launch-chrome-detached.cjs'));
 copyFile(path.join(runnerDir, 'orchestration/extension/launch.sh'), path.join(harnessDir, 'scripts/launch.sh'));
 copyFile(path.join(runnerDir, 'orchestration/extension/live.sh'), path.join(harnessDir, 'scripts/live.sh'));
 copyFile(path.join(runnerDir, 'orchestration/extension/start-watch.sh'), path.join(harnessDir, 'scripts/start-watch.sh'));
@@ -95,7 +97,7 @@ copyFile(path.join(runnerDir, 'recipe/extension/extension-readiness.mjs'), path.
 copyFile(path.join(runnerDir, 'recipe/extension/wallet-fixture-state.cjs'), path.join(harnessDir, 'scripts/wallet-fixture-state.cjs'));
 copyFile(path.join(runnerDir, 'recipe/extension/verify.sh'), path.join(harnessDir, 'scripts/verify.sh'));
 copyFile(path.join(runnerDir, 'orchestration/extension/refresh-build.sh'), path.join(harnessDir, 'scripts/refresh-build.sh'));
-copyFile(path.join(runnerDir, 'orchestration/extension/reopen-browser.sh'), path.join(harnessDir, 'scripts/reopen-browser.sh'));
+copyFile(path.join(runnerDir, 'orchestration/extension/ensure-browser.sh'), path.join(harnessDir, 'scripts/reopen-browser.sh'));
 copyFile(path.join(runnerDir, 'orchestration/lib/harness-path.sh'), path.join(harnessDir, 'scripts/lib/harness-path.sh'));
 copyFile(path.join(runnerDir, 'orchestration/lib/path-defaults.json'), path.join(harnessDir, 'scripts/lib/path-defaults.json'));
 copyFile(path.join(runnerDir, 'orchestration/lib/recipe-paths.mjs'), path.join(harnessDir, 'scripts/lib/recipe-paths.mjs'));

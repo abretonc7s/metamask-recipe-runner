@@ -36,11 +36,11 @@ ct_assert_json_field "$HARNESS/manifest.json" "j.protocolVersion" "v1"
 [ -x "$HARNESS/runner/bin/metamask-recipe" ] || ct_fail "runner delegate not executable"
 ct_assert_file "$HARNESS/action-manifest.json"
 ct_assert_file "$HARNESS/installed-scripts.sha256"
-for f in live.sh refresh-build.sh reopen-browser.sh launch-chrome-detached.cjs sidepanel-toggle.sh verify.sh lib/harness-path.sh; do
+for f in live.sh refresh-build.sh reopen-browser.sh launch-browser.cjs launch-chrome-detached.cjs sidepanel-toggle.sh verify.sh lib/harness-path.sh; do
   ct_assert_file "$HARNESS/scripts/$f"
 done
 # installed copies of moved features must be real scripts, not shims
-for f in refresh-build.sh reopen-browser.sh launch-chrome-detached.cjs; do
+for f in refresh-build.sh reopen-browser.sh launch-browser.cjs launch-chrome-detached.cjs; do
   grep -q "deprecated" "$HARNESS/scripts/$f" && ct_fail "installed $f is a shim"
 done
 grep -q "temp/recipe/harness/" "$TGT/.git/info/exclude" || ct_fail "git exclude entry missing"

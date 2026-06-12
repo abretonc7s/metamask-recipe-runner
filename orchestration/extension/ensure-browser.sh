@@ -1,6 +1,9 @@
 #!/bin/bash
-# reopen-browser.sh — Quick-reopen Playwright Chromium for extension slots.
-# Project-specific (MetaMask Extension). No host framework dependency.
+# ensure-browser.sh — ensure the slot's Playwright Chromium is running
+# (auto-detects the slot, kills any existing browser by recorded PID,
+# relaunches against the existing dist/profile/port; requires an
+# already-prepared profile). Project-specific (MetaMask Extension).
+# (formerly: scripts/extension/reopen-browser.sh)
 #
 # Purpose:
 #   Restarts the slot's Chromium against the existing profile + dist build,
@@ -45,7 +48,7 @@ while [[ $# -gt 0 ]]; do
     --runtime-dir)  RUNTIME_DIR="$2"; shift 2 ;;
     --watcher-port) WATCHER_PORT="$2"; shift 2 ;;
     -h|--help)
-      echo "Usage: reopen-browser.sh [--slot-id <id>] [--repo <metamask-extension>] [--cdp-port <port>] [--runtime-dir <dir>] [--watcher-port <port>]"
+      echo "Usage: ensure-browser.sh [--slot-id <id>] [--repo <metamask-extension>] [--cdp-port <port>] [--runtime-dir <dir>] [--watcher-port <port>]"
       exit 0
       ;;
     *) echo "Unknown flag: $1" >&2; exit 1 ;;

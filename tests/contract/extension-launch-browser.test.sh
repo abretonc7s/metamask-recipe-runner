@@ -1,10 +1,10 @@
 #!/bin/bash
-# Contract test: orchestration/extension/launch-chrome-detached.cjs
+# Contract test: orchestration/extension/launch-browser.cjs (formerly launch-chrome-detached.cjs)
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/helpers.sh"
 ct_init
 
-LAUNCHER="$CT_REPO_ROOT/orchestration/extension/launch-chrome-detached.cjs"
+LAUNCHER="$CT_REPO_ROOT/orchestration/extension/launch-browser.cjs"
 
 # --help exits 0
 ct_run 0 timeout 60 node "$LAUNCHER" --help

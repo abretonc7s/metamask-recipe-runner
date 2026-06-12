@@ -1,11 +1,11 @@
 #!/bin/bash
-# Contract test: orchestration/extension/reopen-browser.sh
+# Contract test: orchestration/extension/ensure-browser.sh (formerly reopen-browser.sh)
 # No Chrome/Playwright: exercises the documented arg + preflight contract.
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/helpers.sh"
 ct_init
 
-REOPEN="$CT_REPO_ROOT/orchestration/extension/reopen-browser.sh"
+REOPEN="$CT_REPO_ROOT/orchestration/extension/ensure-browser.sh"
 
 # --help exits 0
 ct_run 0 timeout 60 bash "$REOPEN" --help
