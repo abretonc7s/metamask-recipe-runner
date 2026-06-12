@@ -26,12 +26,3 @@ echo '{"a":{"b":"val"}}' > "$CT_TMP/ctx.json"
 got="$(bash -c "source '$LIB/json-field.sh'; read_runtime_context_field '$CT_TMP/ctx.json' a.b")"
 [ "$got" = "val" ] || ct_fail "json-field read '$got'"
 ct_run 1 bash -c "source '$LIB/json-field.sh'; read_runtime_context_field '$CT_TMP/nope.json' a.b"
-
-# legacy scripts/lib shims still work and warn on stderr
-out="$(bash -c "source '$CT_REPO_ROOT/scripts/lib/harness-path.sh'; harness_root" 2>"$CT_TMP/err")"
-[ "$out" = "$default_root" ] || ct_fail "shim harness_root '$out'"
-grep -q "deprecated" "$CT_TMP/err" || ct_fail "shim missing deprecation notice"
-
-# legacy recipe-paths.mjs shim re-exports
-node -e "import('$CT_REPO_ROOT/scripts/lib/recipe-paths.mjs').then(m => { if (!m.recipeHarnessRoot) process.exit(1); })" \
-  || ct_fail "recipe-paths shim re-export broken"

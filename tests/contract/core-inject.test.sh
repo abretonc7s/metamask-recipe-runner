@@ -43,7 +43,3 @@ const m = JSON.parse(require('fs').readFileSync('$HARNESS/manifest.json','utf8')
 console.log(m.cleanupCommand.replace(/^RECIPE_HARNESS_ROOT=\S+ /, '').replace(/ --target.*$/, ''));")"
 [ -f "$cleanup_path" ] || ct_fail "cleanupCommand path missing: $cleanup_path"
 
-# legacy path forwards with deprecation notice
-ct_run 0 timeout 60 bash "$CT_REPO_ROOT/scripts/inject-core-harness.sh" --help
-ct_assert_contains "$CT_OUT" "deprecated"
-ct_assert_contains "$CT_OUT" "Usage:"

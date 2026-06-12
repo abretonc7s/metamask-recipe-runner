@@ -63,7 +63,3 @@ ct_run 0 timeout 60 node "$WF" generate --target "$CT_TMP/repo" \
 ct_assert_file "$CT_TMP/state.json"
 node -e "JSON.parse(require('fs').readFileSync('$CT_TMP/state.json','utf8'))" || ct_fail "state.json not valid JSON"
 
-# legacy path forwards with deprecation notice
-ct_run 0 timeout 60 node "$CT_REPO_ROOT/scripts/extension/wallet-fixture-state.cjs" --help
-ct_assert_contains "$CT_OUT" "deprecated"
-ct_assert_contains "$CT_OUT" "Usage:"

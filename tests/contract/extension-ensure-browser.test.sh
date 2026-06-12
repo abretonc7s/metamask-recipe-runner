@@ -30,7 +30,3 @@ ct_stub_extension_repo "$CT_TMP/repo"
 ct_run 1 timeout 60 bash "$REOPEN" --repo "$CT_TMP/repo" --cdp-port 9333 --runtime-dir temp/recipe/runtime
 ct_assert_contains "$CT_OUT" "wallet fixture missing"
 
-# legacy path forwards with deprecation notice
-ct_run 0 timeout 60 bash "$CT_REPO_ROOT/scripts/extension/reopen-browser.sh" --help
-ct_assert_contains "$CT_OUT" "deprecated"
-ct_assert_contains "$CT_OUT" "Usage:"

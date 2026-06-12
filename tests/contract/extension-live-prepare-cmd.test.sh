@@ -30,10 +30,7 @@ cp "$CT_REPO_ROOT/orchestration/extension/launch-browser.cjs" "$INST/"
 cp "$CT_REPO_ROOT/orchestration/extension/start-watch.sh" "$INST/"
 cp "$CT_REPO_ROOT/orchestration/extension/snapshot-dist.sh" "$INST/"
 cp "$CT_REPO_ROOT/orchestration/extension/seed-fixture.sh" "$INST/"
-# the fixture script may still live in the legacy tree or in recipe/
-for cand in "$CT_REPO_ROOT/recipe/extension/wallet-fixture-state.cjs" "$CT_REPO_ROOT/scripts/extension/wallet-fixture-state.cjs"; do
-  [ -f "$cand" ] && { cp "$cand" "$INST/wallet-fixture-state.cjs"; break; }
-done
+cp "$CT_REPO_ROOT/recipe/extension/wallet-fixture-state.cjs" "$INST/wallet-fixture-state.cjs"
 cat > "$INST/launch.sh" <<SH
 #!/bin/bash
 prev=""

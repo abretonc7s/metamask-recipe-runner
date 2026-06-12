@@ -52,7 +52,3 @@ grep -q -- "mobile prepare --target $TGT --platform android --port 8099 --adb-se
 ct_assert_file "$ART/logs/prepare.log"
 ct_assert_file "$ART/runtime-status.json"
 
-# legacy path forwards with deprecation notice
-ct_run 0 bash "$CT_REPO_ROOT/scripts/mobile/launch.sh" --help
-ct_assert_contains "$CT_OUT" "deprecated"
-ct_assert_contains "$CT_OUT" "Usage:"

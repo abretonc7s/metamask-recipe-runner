@@ -44,7 +44,3 @@ ct_run 1 timeout 60 node "$LAUNCHER" \
   --extension-dir "$CT_TMP/nodist" --chrome-log "$CT_TMP/r2/l" --chrome-pid "$CT_TMP/r2/p"
 ct_assert_contains "$CT_OUT" "manifest not found"
 
-# legacy path forwards with deprecation notice
-ct_run 0 timeout 60 node "$CT_REPO_ROOT/scripts/extension/launch-chrome-detached.cjs" --help
-ct_assert_contains "$CT_OUT" "deprecated"
-ct_assert_contains "$CT_OUT" "Usage:"

@@ -29,7 +29,3 @@ ct_assert_contains "$CT_OUT" '"status": "fail"'
 # missing dist entirely -> error
 ct_run 1 timeout 60 node "$RD" --target "$CT_TMP/nodist" --json
 
-# legacy path forwards with deprecation notice
-ct_run 0 timeout 60 node "$CT_REPO_ROOT/scripts/extension/extension-readiness.mjs" --help
-ct_assert_contains "$CT_OUT" "deprecated"
-ct_assert_contains "$CT_OUT" "Usage:"

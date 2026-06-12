@@ -50,7 +50,3 @@ cleanup_cmd="$(node -e "console.log(JSON.parse(require('fs').readFileSync('$HARN
 cleanup_path="$(printf '%s' "$cleanup_cmd" | sed -E 's/^RECIPE_HARNESS_ROOT=[^ ]+ //; s/ --target.*$//')"
 [ -f "$cleanup_path" ] || ct_fail "cleanupCommand path missing: $cleanup_path"
 
-# legacy path forwards with deprecation notice
-ct_run 0 bash "$CT_REPO_ROOT/scripts/inject-mobile-harness.sh" --help
-ct_assert_contains "$CT_OUT" "deprecated"
-ct_assert_contains "$CT_OUT" "Usage:"

@@ -26,9 +26,5 @@ echo '{"name":"core-stub"}' > "$TGT/package.json"
 ct_run 0 timeout 60 bash "$INJECT" --target "$TGT"
 ct_assert_file "$TGT/temp/recipe/harness/core/manifest.json"
 ct_run 0 timeout 60 bash "$CLEANUP" --target "$TGT"
-[ -e "$TGT/temp/recipe/harness/core" ] && ct_fail "core harness dir not removed"
+[ ! -e "$TGT/temp/recipe/harness/core" ] || ct_fail "core harness dir not removed"
 
-# legacy path forwards with deprecation notice
-ct_run 0 timeout 60 bash "$CT_REPO_ROOT/scripts/cleanup-core-harness.sh" --help
-ct_assert_contains "$CT_OUT" "deprecated"
-ct_assert_contains "$CT_OUT" "Usage:"

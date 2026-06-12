@@ -30,7 +30,3 @@ ct_assert_contains "$CT_OUT" "CDP not reachable"
 ct_run 1 timeout 60 env REPO="$CT_TMP/repo" bash "$SP" status --bogus
 ct_assert_contains "$CT_OUT" "unknown arg"
 
-# legacy path forwards with deprecation notice
-ct_run 0 timeout 60 bash "$CT_REPO_ROOT/scripts/extension/sidepanel-toggle.sh" --help
-ct_assert_contains "$CT_OUT" "deprecated"
-ct_assert_contains "$CT_OUT" "Usage:"

@@ -55,7 +55,3 @@ ct_assert_contains "$CT_OUT" "Skipping"
 grep -q "^verify" "$CT_TMP/child-argv.log" && ct_fail "verify ran despite launch failure"
 ct_assert_json_field "$CT_TMP/art2/summary.json" "j.status" "fail"
 
-# legacy path forwards with deprecation notice
-ct_run 0 bash "$CT_REPO_ROOT/scripts/mobile/live.sh" --help
-ct_assert_contains "$CT_OUT" "deprecated"
-ct_assert_contains "$CT_OUT" "Usage:"

@@ -109,16 +109,16 @@ ARTIFACTS="${ARTIFACTS:-$HARNESS_DIR/verify/$(date -u +%Y%m%dT%H%M%SZ)}"
 mkdir -p "$ARTIFACTS/logs"
 EXTENSION_ID_FILE="$TARGET/$RUNTIME_DIR/extension.id"
 # Shared JSON reader: $SCRIPT_DIR/lib when running from the installed copy,
-# else the runner canonical at scripts/lib.
+# else the runner canonical at orchestration/lib.
 # shellcheck disable=SC1091
-for _lib in "$SCRIPT_DIR/lib/json-field.sh" "$SCRIPT_DIR/../../orchestration/lib/json-field.sh" "$SCRIPT_DIR/../lib/json-field.sh" "$SCRIPT_DIR/../../../scripts/lib/json-field.sh"; do
+for _lib in "$SCRIPT_DIR/lib/json-field.sh" "$SCRIPT_DIR/../../orchestration/lib/json-field.sh"; do
   [ -f "$_lib" ] && { . "$_lib"; break; }
 done
 unset _lib
 # Fail fast with an actionable message if neither path loaded (e.g. an install that
 # predates the lib co-location), instead of a cryptic later `set -e` abort.
 if ! command -v read_runtime_context_field >/dev/null 2>&1; then
-  echo "extension verify: json-field helper missing (scripts/lib/json-field.sh). Run metamask-recipe extension prepare --target $TARGET" >&2
+  echo "extension verify: json-field helper missing (orchestration/lib/json-field.sh). Run metamask-recipe extension prepare --target $TARGET" >&2
   exit 1
 fi
 refresh_extension_id() {

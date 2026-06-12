@@ -37,7 +37,3 @@ grep -q "temp/recipe/harness/" "$TGT/.git/info/exclude" 2>/dev/null && ct_fail "
 # idempotent on a target with nothing installed
 ct_run 0 timeout 60 node "$CLEANUP" --target "$TGT"
 
-# legacy path forwards with deprecation notice
-ct_run 0 timeout 60 node "$CT_REPO_ROOT/scripts/cleanup-extension-harness.mjs" --help
-ct_assert_contains "$CT_OUT" "deprecated"
-ct_assert_contains "$CT_OUT" "Usage:"

@@ -55,9 +55,9 @@ if ! command -v harness_root >/dev/null 2>&1; then
   exit 1
 fi
 # extension-readiness is a recipe-tree feature: co-located in installed
-# copies, under recipe/extension (or its legacy home) in a repo checkout.
+# copies, under recipe/extension in a repo checkout.
 READINESS_MJS=""
-for _r in "$SCRIPT_DIR/extension-readiness.mjs" "$SCRIPT_DIR/../../recipe/extension/extension-readiness.mjs" "$SCRIPT_DIR/../../scripts/extension/extension-readiness.mjs"; do
+for _r in "$SCRIPT_DIR/extension-readiness.mjs" "$SCRIPT_DIR/../../recipe/extension/extension-readiness.mjs"; do
   [ -f "$_r" ] && { READINESS_MJS="$_r"; break; }
 done
 unset _r

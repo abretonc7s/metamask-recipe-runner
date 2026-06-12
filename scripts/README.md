@@ -1,5 +1,9 @@
-# Deprecated forwarding shims
+# Dev tooling
 
-Real code lives in `recipe/`, `orchestration/`, and `library/`. Every script
-here forwards to its new home (one deprecation line on stderr, then exec).
-Removed once external consumers migrate.
+Repo development tooling only (no runtime code, no shims):
+
+- `check.mjs` — type-check + syntax + committed-recipe validation (`yarn check`)
+- `link-local-farmslot.mjs` — co-develop against a local farmslot protocol checkout
+- `validate-action-e2e-artifacts.mjs` — validate recorded action e2e artifacts
+
+Runtime code lives in `recipe/`, `orchestration/`, and `library/`.

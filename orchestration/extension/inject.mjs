@@ -81,9 +81,6 @@ copyFile(path.join(runnerDir, 'library/manifests/mobile.action-manifest.json'), 
 copyFile(path.join(runnerDir, 'library/manifests/extension.action-manifest.json'), path.join(harnessDir, 'runner/manifests/extension.action-manifest.json'));
 copyFile(path.join(runnerDir, 'library/manifests/extension.action-manifest.json'), path.join(harnessDir, 'action-manifest.json'));
 copyDir(path.join(runnerDir, 'library/recipes'), path.join(harnessDir, 'runner/recipes'));
-copyDir(path.join(runnerDir, 'scripts/extension'), path.join(harnessDir, 'scripts'));
-// Moved features live in orchestration/; overwrite the forwarding shims so
-// the installed copy keeps the real scripts (same installed layout).
 copyFile(path.join(runnerDir, 'orchestration/extension/launch-browser.cjs'), path.join(harnessDir, 'scripts/launch-browser.cjs'));
 // installed back-compat alias: callers of the pre-rename installed name
 copyFile(path.join(runnerDir, 'orchestration/extension/launch-browser.cjs'), path.join(harnessDir, 'scripts/launch-chrome-detached.cjs'));
@@ -105,11 +102,7 @@ copyFile(path.join(runnerDir, 'orchestration/lib/json-field.sh'), path.join(harn
 makeExecutableTree(path.join(harnessDir, 'scripts'));
 fs.writeFileSync(path.join(harnessDir, 'installed-scripts.sha256'), `${dirContentHash(path.join(harnessDir, 'scripts'))}\n`);
 
-// cleanup script: orchestration home once moved; legacy scripts/ home until then.
-const cleanupScript = [
-  path.join(runnerDir, 'orchestration/extension/cleanup.mjs'),
-  path.join(runnerDir, 'scripts/cleanup-extension-harness.mjs'),
-].find((candidate) => fs.existsSync(candidate)) || path.join(runnerDir, 'scripts/cleanup-extension-harness.mjs');
+const cleanupScript = path.join(runnerDir, 'orchestration/extension/cleanup.mjs');
 const cleanupCommand = `RECIPE_HARNESS_ROOT=${harnessRoot} ${shellQuote(cleanupScript)} --target ${shellQuote(target)}`;
 const manifest = {
   adapter: 'extension',

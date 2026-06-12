@@ -59,7 +59,3 @@ ct_run 1 timeout 60 bash "$INST/launch.sh" --target "$TGT" --cdp-port 9333 \
 ct_assert_json_field "$CT_TMP/a2/summary.json" "j.status" "fail"
 ct_assert_json_field "$CT_TMP/a2/summary.json" "j.prepare.exitCode" "7"
 
-# legacy path forwards with deprecation notice
-ct_run 0 timeout 60 bash "$CT_REPO_ROOT/scripts/extension/launch.sh" --help
-ct_assert_contains "$CT_OUT" "deprecated"
-ct_assert_contains "$CT_OUT" "Usage:"

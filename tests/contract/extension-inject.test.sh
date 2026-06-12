@@ -52,7 +52,3 @@ console.log(match ? match[1] : '');
 ")"
 [ -f "$cleanup_path" ] || ct_fail "cleanupCommand path missing: $cleanup_path"
 
-# legacy path forwards with deprecation notice
-ct_run 0 timeout 60 node "$CT_REPO_ROOT/scripts/inject-extension-harness.mjs" --help
-ct_assert_contains "$CT_OUT" "deprecated"
-ct_assert_contains "$CT_OUT" "Usage:"

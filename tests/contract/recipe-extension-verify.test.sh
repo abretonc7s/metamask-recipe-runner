@@ -27,7 +27,3 @@ mkdir -p "$CT_TMP/repo/task-recipes"
 ct_run 2 timeout 60 bash "$VF" --target "$CT_TMP/repo" --out task-recipes
 ct_assert_contains "$CT_OUT" "no smoke.extension.recipe.json"
 
-# legacy path forwards with deprecation notice
-ct_run 0 timeout 60 bash "$CT_REPO_ROOT/scripts/extension/verify.sh" --help
-ct_assert_contains "$CT_OUT" "deprecated"
-ct_assert_contains "$CT_OUT" "Usage:"

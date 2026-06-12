@@ -64,9 +64,7 @@ if [ -z "$METAMASK_RUNNER_PROTOCOL_ROOT" ] && [ -f "$RUNNER_DIR/.farmslot-root" 
   METAMASK_RUNNER_PROTOCOL_ROOT="$(cat "$RUNNER_DIR/.farmslot-root")"
 fi
 export METAMASK_RUNNER_DIR METAMASK_RUNNER_SOURCE_KIND METAMASK_RUNNER_REVISION METAMASK_RUNNER_PROTOCOL_ROOT
-# cleanup script: co-located once moved; legacy scripts/ home until then.
 CLEANUP_SH="$SCRIPT_DIR/cleanup.sh"
-[ -f "$CLEANUP_SH" ] || CLEANUP_SH="$RUNNER_DIR/scripts/cleanup-mobile-harness.sh"
 HARNESS_ROOT="$(harness_root)"
 HARNESS_REL="$HARNESS_ROOT/mobile"
 
@@ -185,10 +183,8 @@ install_v1_runner_assets() {
   if [ -d "$METAMASK_RUNNER_DIR/library/recipes" ]; then
     rsync -a --delete "$METAMASK_RUNNER_DIR/library/recipes/" "$HARNESS_DIR/runner/recipes/"
   fi
-  if [ -d "$METAMASK_RUNNER_DIR/scripts/mobile" ]; then
-    rsync -a --delete "$METAMASK_RUNNER_DIR/scripts/mobile/" "$HARNESS_DIR/scripts/"
-    # Moved features live in orchestration/; overwrite the forwarding shims so
-    # the installed copy keeps the real scripts (same installed layout).
+  if [ -d "$METAMASK_RUNNER_DIR/orchestration/mobile" ]; then
+    mkdir -p "$HARNESS_DIR/scripts"
     cp "$METAMASK_RUNNER_DIR/orchestration/mobile/launch.sh" "$HARNESS_DIR/scripts/launch.sh"
     cp "$METAMASK_RUNNER_DIR/orchestration/mobile/live.sh" "$HARNESS_DIR/scripts/live.sh"
     cp "$METAMASK_RUNNER_DIR/recipe/mobile/verify.sh" "$HARNESS_DIR/scripts/verify.sh"

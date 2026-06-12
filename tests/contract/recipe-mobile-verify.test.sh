@@ -23,7 +23,3 @@ ct_assert_contains "$CT_OUT" "Unknown --preflight-mode"
 ct_run 2 timeout 60 env RECIPE_HARNESS_MOBILE_AUTO_START=maybe bash "$VF" --target "$CT_TMP"
 ct_assert_contains "$CT_OUT" "Unknown RECIPE_HARNESS_MOBILE_AUTO_START"
 
-# legacy path forwards with deprecation notice
-ct_run 0 timeout 60 bash "$CT_REPO_ROOT/scripts/mobile/verify.sh" --help
-ct_assert_contains "$CT_OUT" "deprecated"
-ct_assert_contains "$CT_OUT" "Usage:"

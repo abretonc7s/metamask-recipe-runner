@@ -41,7 +41,3 @@ ct_assert_contains "$CT_OUT" "Cleaned mobile recipe harness"
 grep -q "temp/recipe/harness/" "$TGT/.git/info/exclude" 2>/dev/null && ct_fail "exclude entry not removed"
 [ -z "$(git -C "$TGT" status --porcelain)" ] || ct_fail "target not pristine after cleanup"
 
-# legacy path forwards with deprecation notice
-ct_run 0 bash "$CT_REPO_ROOT/scripts/cleanup-mobile-harness.sh" --help
-ct_assert_contains "$CT_OUT" "deprecated"
-ct_assert_contains "$CT_OUT" "Usage:"

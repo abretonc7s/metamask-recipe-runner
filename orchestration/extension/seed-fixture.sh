@@ -108,8 +108,7 @@ resolve_fixture_script() {
   local cand
   for cand in \
     "$SCRIPT_DIR/wallet-fixture-state.cjs" \
-    "$SCRIPT_DIR/../../recipe/extension/wallet-fixture-state.cjs" \
-    "$SCRIPT_DIR/../../scripts/extension/wallet-fixture-state.cjs"
+    "$SCRIPT_DIR/../../recipe/extension/wallet-fixture-state.cjs"
   do
     [ -f "$cand" ] && { printf '%s' "$cand"; return 0; }
   done

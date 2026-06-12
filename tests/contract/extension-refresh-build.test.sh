@@ -43,7 +43,3 @@ ct_run 2 timeout 90 env PATH="$CT_TMP/stubbin:$PATH" ASDF_DATA_DIR="$CT_TMP/noas
   bash "$REFRESH" --repo "$CT_TMP/repo" --timeout 5 --clean-timeout 5
 ct_assert_contains "$CT_OUT" "exited before clean pass"
 
-# legacy path forwards with deprecation notice
-ct_run 0 timeout 60 bash "$CT_REPO_ROOT/scripts/extension/refresh-build.sh" --help
-ct_assert_contains "$CT_OUT" "deprecated"
-ct_assert_contains "$CT_OUT" "Usage:"
