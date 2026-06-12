@@ -1,3 +1,16 @@
+compat-overlay: rn81-message-event-source (historical-checkout replay support)
+
+What: patches metamask-mobile shim.js to add a read-only
+MessageEvent.prototype.source getter.
+Why: the harness CDP bridge expects browser-compatible MessageEvent shape;
+pre-RN-0.81 checkouts ship a polyfill that omits .source, so the bridge
+cannot attach when replaying tasks on those historical commits.
+When: only when replaying/evaluating against mobile checkouts older than the
+RN 0.81 upgrade (pre-RN-0.81 checkouts). Never needed on current main.
+How: applied MANUALLY in the historical product checkout —
+  git apply <this file>     (and `git apply -R` to remove)
+No automatic apply logic exists in this repo. See ../README.md.
+
 diff --git a/shim.js b/shim.js
 --- a/shim.js
 +++ b/shim.js

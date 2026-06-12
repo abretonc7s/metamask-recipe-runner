@@ -44,6 +44,11 @@ done
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 RUNNER_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd -P)"
 ADAPTER_DIR="$RUNNER_DIR/library/actions/mobile"
+# compat-overlays: NOT applied here. orchestration/compat-overlays/ holds
+# reversible patches applied only when injecting into HISTORICAL checkouts
+# (replay/eval against old product commits, e.g. pre-RN-0.81 mobile); the
+# operator/recipe-harness skill applies them manually before the rebuild.
+# See orchestration/compat-overlays/README.md.
 # shellcheck disable=SC1091
 . "$SCRIPT_DIR/../lib/hash-helpers.sh"
 # shellcheck disable=SC1091

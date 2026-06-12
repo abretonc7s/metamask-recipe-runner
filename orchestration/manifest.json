@@ -169,6 +169,14 @@
       "purpose": "Single source for the default harness root and runtime dir.",
       "inputs": "none",
       "outputs": "recipeHarnessRoot / recipeRuntimeDir defaults"
+    },
+    {
+      "id": "compat-overlays/mobile",
+      "entry": "orchestration/compat-overlays/mobile",
+      "kind": "compat-overlay",
+      "purpose": "Historical-commit replay support: reversible source overlays (e.g. rn81-message-event-source.patch) applied manually/via the recipe-harness skill so pre-RN-0.81 mobile checkouts boot and bridge under the current toolchain.",
+      "inputs": "manual `git apply` in the historical product checkout (no in-repo apply logic)",
+      "outputs": "patched historical checkout (reversible via git apply -R); overlay path recorded in eval evidence"
     }
   ]
 }
