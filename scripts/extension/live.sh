@@ -99,7 +99,10 @@ NODE
   quoted_runtime_dist="$(printf '%q' "$RUNTIME_DIST_ABS")"
   quoted_profile="$(printf '%q' "$PROFILE_ABS")"
   quoted_fixture_script="$(printf '%q' "$SCRIPT_DIR/wallet-fixture-state.cjs")"
-  quoted_chrome_launcher="$(printf '%q' "$SCRIPT_DIR/launch-chrome-detached.cjs")"
+  # Moved feature: prefer the repo orchestration home, else the installed co-located copy.
+  chrome_launcher="$SCRIPT_DIR/../../orchestration/extension/launch-chrome-detached.cjs"
+  [ -f "$chrome_launcher" ] || chrome_launcher="$SCRIPT_DIR/launch-chrome-detached.cjs"
+  quoted_chrome_launcher="$(printf '%q' "$chrome_launcher")"
   quoted_fixture_state="$(printf '%q' "$FIXTURE_STATE_ABS")"
   quoted_fixture_validation="$(printf '%q' "$FIXTURE_VALIDATION_ABS")"
   quoted_extension_id_file="$(printf '%q' "$TARGET/$RUNTIME_DIR/extension.id")"
