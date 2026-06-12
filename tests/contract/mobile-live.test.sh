@@ -54,4 +54,3 @@ ct_run 1 bash "$INST/live.sh" --target "$TGT" --artifacts-dir "$CT_TMP/art2"
 ct_assert_contains "$CT_OUT" "Skipping"
 grep -q "^verify" "$CT_TMP/child-argv.log" && ct_fail "verify ran despite launch failure"
 ct_assert_json_field "$CT_TMP/art2/summary.json" "j.status" "fail"
-

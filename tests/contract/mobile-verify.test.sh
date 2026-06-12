@@ -22,4 +22,3 @@ ct_assert_contains "$CT_OUT" "Unknown --preflight-mode"
 # auto-start gate env validation: bogus value exits 2
 ct_run 2 timeout 60 env RECIPE_HARNESS_MOBILE_AUTO_START=maybe bash "$VF" --target "$CT_TMP"
 ct_assert_contains "$CT_OUT" "Unknown RECIPE_HARNESS_MOBILE_AUTO_START"
-

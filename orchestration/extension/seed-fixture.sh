@@ -30,7 +30,7 @@
 #   file or fixture-state phase failed; 2 — bad args.
 #
 # Never touches: product source files; the fixture file (read-only).
-set -uo pipefail
+set -euo pipefail
 
 SUBCOMMAND="${1:-}"
 case "$SUBCOMMAND" in

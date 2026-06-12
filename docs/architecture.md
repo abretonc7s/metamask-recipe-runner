@@ -47,7 +47,7 @@ is the main way to understand the repository.
 | Subsystem | Question it answers | Primary files | Should contain | Should not contain |
 |---|---|---|---|---|
 | Recipe capability/execution | “What can a MetaMask recipe do, and how does a node execute?” | `library/manifests/`, `library/recipes/`, `runner/src/runner.ts`, `runner/src/adapters.ts`, `runner/src/live-adapter-contract.ts`, `library/actions/` | action manifests, domain actions, UI transport binding, adapter outputs, proof semantics | Metro startup, Chrome process flags, simulator boot, git-exclude/rsync cleanup |
-| Runtime lifecycle / sandbox helpers | “How do I give an agent an isolated app session that is ready to inspect or run recipes?” | `bin/mm-recipe`, `bin/mme-recipe`, `orchestration/{mobile,extension,core}/`, `recipe/{mobile,extension}/`, `orchestration/lib/` | install/sync harness, start/reuse Metro or Chrome, prewarm bundles, open Extension full-screen or popup-style, prepare dedicated profiles/fixtures, check build/runtime health, cleanup local files | new recipe schema, graph traversal, MetaMask business semantics, task-specific proof logic |
+| Runtime lifecycle / sandbox helpers | “How do I give an agent an isolated app session that is ready to inspect or run recipes?” | `bin/mm-recipe`, `bin/mme-recipe`, `orchestration/{mobile,extension,core}/`, `runner/{mobile,extension}/`, `orchestration/lib/` | install/sync harness, start/reuse Metro or Chrome, prewarm bundles, open Extension full-screen or popup-style, prepare dedicated profiles/fixtures, check build/runtime health, cleanup local files | new recipe schema, graph traversal, MetaMask business semantics, task-specific proof logic |
 
 When reviewing a change, first decide which subsystem it touches. Recipe changes
 should be validated against manifests and action artifacts. Runtime lifecycle changes should be validated by install/launch/live/verify
@@ -138,7 +138,7 @@ isolated browser profile, unpacked extension loaded, and a known home/popup-styl
 UI target. If a bug is about Metro, bundle prewarm, simulator launch, Chrome CDP,
 Extension full-screen vs popup presentation, build freshness, wallet fixture
 placement, git-exclude, or cleanup, start in `bin/mm-recipe`, `bin/mme-recipe`,
-`orchestration/{mobile,extension,core}/` and `recipe/{mobile,extension}/`.
+`orchestration/{mobile,extension,core}/` and `runner/{mobile,extension}/`.
 
 Do not put recipe graph traversal into shell scripts. Shell scripts may prepare
 or inspect the sandboxed runtime, then delegate graph execution to

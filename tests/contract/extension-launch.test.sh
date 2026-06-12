@@ -58,4 +58,3 @@ ct_run 1 timeout 60 bash "$INST/launch.sh" --target "$TGT" --cdp-port 9333 \
   --prepare-cmd "exit 7" --artifacts-dir "$CT_TMP/a2"
 ct_assert_json_field "$CT_TMP/a2/summary.json" "j.status" "fail"
 ct_assert_json_field "$CT_TMP/a2/summary.json" "j.prepare.exitCode" "7"
-

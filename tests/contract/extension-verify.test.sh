@@ -26,4 +26,3 @@ ct_assert_contains "$CT_OUT" "did not resolve to a safe path"
 mkdir -p "$CT_TMP/repo/task-recipes"
 ct_run 2 timeout 60 bash "$VF" --target "$CT_TMP/repo" --out task-recipes
 ct_assert_contains "$CT_OUT" "no smoke.extension.recipe.json"
-

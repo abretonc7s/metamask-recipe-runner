@@ -22,7 +22,7 @@
 #
 # Never touches: the source dist (read-only); anything outside
 # --runtime-dist and --summary.
-set -uo pipefail
+set -euo pipefail
 
 DIST=""
 RUNTIME_DIST=""

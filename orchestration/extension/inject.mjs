@@ -81,6 +81,9 @@ copyFile(path.join(runnerDir, 'library/manifests/mobile.action-manifest.json'), 
 copyFile(path.join(runnerDir, 'library/manifests/extension.action-manifest.json'), path.join(harnessDir, 'runner/manifests/extension.action-manifest.json'));
 copyFile(path.join(runnerDir, 'library/manifests/extension.action-manifest.json'), path.join(harnessDir, 'action-manifest.json'));
 copyDir(path.join(runnerDir, 'library/recipes'), path.join(harnessDir, 'runner/recipes'));
+// Installed-layout back-compat (INTENTIONAL): targets keep a flat
+// <harness>/scripts/ subtree assembled from the runner trees, so installed
+// consumers are unaffected by runner-repo layout changes.
 copyFile(path.join(runnerDir, 'orchestration/extension/launch-browser.cjs'), path.join(harnessDir, 'scripts/launch-browser.cjs'));
 // installed back-compat alias: callers of the pre-rename installed name
 copyFile(path.join(runnerDir, 'orchestration/extension/launch-browser.cjs'), path.join(harnessDir, 'scripts/launch-chrome-detached.cjs'));

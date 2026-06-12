@@ -51,4 +51,3 @@ const match = m.cleanupCommand.match(/'([^']*cleanup[^']*)'/);
 console.log(match ? match[1] : '');
 ")"
 [ -f "$cleanup_path" ] || ct_fail "cleanupCommand path missing: $cleanup_path"
-

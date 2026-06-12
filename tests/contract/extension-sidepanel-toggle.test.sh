@@ -29,4 +29,3 @@ ct_assert_contains "$CT_OUT" "CDP not reachable"
 # unknown arg exits 1
 ct_run 1 timeout 60 env REPO="$CT_TMP/repo" bash "$SP" status --bogus
 ct_assert_contains "$CT_OUT" "unknown arg"
-

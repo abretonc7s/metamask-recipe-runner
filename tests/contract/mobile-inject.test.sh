@@ -49,4 +49,3 @@ ct_assert_file "$HARNESS/added-git-exclude"
 cleanup_cmd="$(node -e "console.log(JSON.parse(require('fs').readFileSync('$HARNESS/manifest.json','utf8')).cleanupCommand)")"
 cleanup_path="$(printf '%s' "$cleanup_cmd" | sed -E 's/^RECIPE_HARNESS_ROOT=[^ ]+ //; s/ --target.*$//')"
 [ -f "$cleanup_path" ] || ct_fail "cleanupCommand path missing: $cleanup_path"
-

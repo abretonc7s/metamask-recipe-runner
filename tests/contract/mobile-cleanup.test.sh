@@ -40,4 +40,3 @@ ct_assert_contains "$CT_OUT" "Cleaned mobile recipe harness"
 [ -e "$HARNESS" ] && ct_fail "harness dir not removed"
 grep -q "temp/recipe/harness/" "$TGT/.git/info/exclude" 2>/dev/null && ct_fail "exclude entry not removed"
 [ -z "$(git -C "$TGT" status --porcelain)" ] || ct_fail "target not pristine after cleanup"
-

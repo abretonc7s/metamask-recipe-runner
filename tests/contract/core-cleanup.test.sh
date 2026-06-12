@@ -27,4 +27,3 @@ ct_run 0 timeout 60 bash "$INJECT" --target "$TGT"
 ct_assert_file "$TGT/temp/recipe/harness/core/manifest.json"
 ct_run 0 timeout 60 bash "$CLEANUP" --target "$TGT"
 [ ! -e "$TGT/temp/recipe/harness/core" ] || ct_fail "core harness dir not removed"
-

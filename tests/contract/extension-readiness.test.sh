@@ -28,4 +28,3 @@ ct_assert_contains "$CT_OUT" '"status": "fail"'
 
 # missing dist entirely -> error
 ct_run 1 timeout 60 node "$RD" --target "$CT_TMP/nodist" --json
-

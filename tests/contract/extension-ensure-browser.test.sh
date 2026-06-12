@@ -29,4 +29,3 @@ ct_assert_contains "$CT_OUT" "No build at"
 ct_stub_extension_repo "$CT_TMP/repo"
 ct_run 1 timeout 60 bash "$REOPEN" --repo "$CT_TMP/repo" --cdp-port 9333 --runtime-dir temp/recipe/runtime
 ct_assert_contains "$CT_OUT" "wallet fixture missing"
-

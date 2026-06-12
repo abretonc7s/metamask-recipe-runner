@@ -42,4 +42,3 @@ chmod +x "$CT_TMP/stubbin/yarn"
 ct_run 2 timeout 90 env PATH="$CT_TMP/stubbin:$PATH" ASDF_DATA_DIR="$CT_TMP/noasdf" \
   bash "$REFRESH" --repo "$CT_TMP/repo" --timeout 5 --clean-timeout 5
 ct_assert_contains "$CT_OUT" "exited before clean pass"
-

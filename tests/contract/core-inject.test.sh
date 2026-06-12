@@ -42,4 +42,3 @@ cleanup_path="$(node -e "
 const m = JSON.parse(require('fs').readFileSync('$HARNESS/manifest.json','utf8'));
 console.log(m.cleanupCommand.replace(/^RECIPE_HARNESS_ROOT=\S+ /, '').replace(/ --target.*$/, ''));")"
 [ -f "$cleanup_path" ] || ct_fail "cleanupCommand path missing: $cleanup_path"
-

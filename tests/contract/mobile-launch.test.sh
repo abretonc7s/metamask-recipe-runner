@@ -51,4 +51,3 @@ grep -q -- "mobile prepare --target $TGT --platform android --port 8099 --adb-se
   || ct_fail "prepare argv not threaded: $(cat "$CT_TMP/runner-argv.log")"
 ct_assert_file "$ART/logs/prepare.log"
 ct_assert_file "$ART/runtime-status.json"
-

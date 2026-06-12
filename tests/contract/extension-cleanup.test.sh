@@ -36,4 +36,3 @@ grep -q "temp/recipe/harness/" "$TGT/.git/info/exclude" 2>/dev/null && ct_fail "
 
 # idempotent on a target with nothing installed
 ct_run 0 timeout 60 node "$CLEANUP" --target "$TGT"
-

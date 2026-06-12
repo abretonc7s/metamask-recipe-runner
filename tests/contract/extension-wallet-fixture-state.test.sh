@@ -62,4 +62,3 @@ ct_run 0 timeout 60 node "$WF" generate --target "$CT_TMP/repo" \
   --fixture "$CT_TMP/fixture.json" --out "$CT_TMP/state.json"
 ct_assert_file "$CT_TMP/state.json"
 node -e "JSON.parse(require('fs').readFileSync('$CT_TMP/state.json','utf8'))" || ct_fail "state.json not valid JSON"
-

@@ -188,6 +188,9 @@ install_v1_runner_assets() {
   if [ -d "$METAMASK_RUNNER_DIR/library/recipes" ]; then
     rsync -a --delete "$METAMASK_RUNNER_DIR/library/recipes/" "$HARNESS_DIR/runner/recipes/"
   fi
+  # Installed-layout back-compat (INTENTIONAL): targets keep a flat
+  # <harness>/scripts/ subtree assembled from the runner trees, so installed
+  # consumers are unaffected by runner-repo layout changes.
   if [ -d "$METAMASK_RUNNER_DIR/orchestration/mobile" ]; then
     mkdir -p "$HARNESS_DIR/scripts"
     cp "$METAMASK_RUNNER_DIR/orchestration/mobile/launch.sh" "$HARNESS_DIR/scripts/launch.sh"
