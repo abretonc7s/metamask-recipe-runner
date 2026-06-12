@@ -74,11 +74,11 @@ if [ ! -x "$TSX_BIN" ]; then
 fi
 
 if [ -x "$TSX_BIN" ]; then
-  exec "$TSX_BIN" "$RUNNER_DIR/src/cli.ts" "$@"
+  exec "$TSX_BIN" "$RUNNER_DIR/runner/src/cli.ts" "$@"
 fi
 
 if node_can_run_source_typescript; then
-  exec node --no-warnings "$RUNNER_DIR/src/cli.ts" "$@"
+  exec node --no-warnings "$RUNNER_DIR/runner/src/cli.ts" "$@"
 fi
 
 echo "metamask-recipe source checkout requires dist/cli.js, Node.js TypeScript type stripping, or a local tsx binary. Install dependencies normally, or set TSX_BIN/FARMSLOT_ROOT for local protocol co-development." >&2

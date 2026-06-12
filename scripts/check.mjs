@@ -119,17 +119,17 @@ function disallowPlainSourceJs() {
 }
 
 function validateCommittedRecipes() {
-  const recipeDir = path.join(runnerDir, 'recipes');
+  const recipeDir = path.join(runnerDir, 'library/recipes');
   const recipes = listFiles(recipeDir, (name) => name.endsWith('.recipe.json'));
   const manifests = {
     mobile: readJson(
-      path.join(runnerDir, 'manifests/mobile.action-manifest.json'),
+      path.join(runnerDir, 'library/manifests/mobile.action-manifest.json'),
     ),
     extension: readJson(
-      path.join(runnerDir, 'manifests/extension.action-manifest.json'),
+      path.join(runnerDir, 'library/manifests/extension.action-manifest.json'),
     ),
     core: readJson(
-      path.join(runnerDir, 'manifests/core.action-manifest.json'),
+      path.join(runnerDir, 'library/manifests/core.action-manifest.json'),
     ),
   };
   for (const [adapter, manifest] of Object.entries(manifests)) {

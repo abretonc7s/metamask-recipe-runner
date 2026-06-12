@@ -6,9 +6,9 @@ package without requiring target app builds to transpile runner code.
 
 ## Extension rules
 
-- `src/**/*.ts` — typed runner core: CLI parsing, manifests, adapter binding,
+- `runner/src/**/*.ts` — typed runner core: CLI parsing, manifests, adapter binding,
   runtime decisions, and shared helper logic.
-- `live-adapters/**/*.mjs` and `scripts/**/*.mjs` — standalone ESM modules that
+- `library/actions/**/*.mjs` and `scripts/**/*.mjs` — standalone ESM modules that
   Node executes directly with no build step. Use these for action adapters and
   small injected/runtime helpers.
 - `*.cjs` — compatibility islands only. Keep these quarantined for helper code
@@ -31,6 +31,6 @@ The mix is intentional only when the boundary is clear:
 4. Shell stays at the edge for host/device commands.
 
 If a file crosses those boundaries, move the logic inward: shell should call a
-Node module, standalone `.mjs` should become typed `src/**/*.ts` when it grows
+Node module, standalone `.mjs` should become typed `runner/src/**/*.ts` when it grows
 shared domain logic, and new compatibility needs should be documented before
 adding another `.cjs` file.

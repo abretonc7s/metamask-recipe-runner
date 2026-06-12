@@ -1,0 +1,238 @@
+{
+  "schemaVersion": 1,
+  "description": "Orchestration feature surface: one entry per feature script. orchestration/doctor.mjs verifies every entry point exists, answers --help with exit 0, and that no orchestration script is missing from this manifest.",
+  "features": [
+    {
+      "id": "mobile/launch",
+      "entry": "orchestration/mobile/launch.sh",
+      "kind": "bash",
+      "purpose": "Mobile instance identity intake (port/simulator/adb/runtime-dir tuple) + prepare/preflight launch.",
+      "inputs": "--target --platform --preflight-mode --port|--watcher-port|--cdp-port --simulator --adb-serial --runtime-dir --wallet-setup/--no-wallet-setup --wallet-fixture --artifacts-dir; env WATCHER_PORT>METRO_PORT>CDP_PORT, IOS_SIMULATOR>SIM_UDID, ADB_SERIAL>ANDROID_SERIAL, RECIPE_RUNTIME_DIR, RECIPE_HARNESS_MOBILE_PREFLIGHT_MODE",
+      "outputs": "<artifacts>/summary.json, runtime-status.json, logs/prepare.log; exit 0/1/2"
+    },
+    {
+      "id": "mobile/live",
+      "entry": "orchestration/mobile/live.sh",
+      "kind": "bash",
+      "purpose": "Launch-then-verify chaining for one mobile slot run (verify gets --no-auto-start).",
+      "inputs": "--target --platform --preflight-mode --artifacts-dir --wallet-setup/--no-wallet-setup --wallet-fixture",
+      "outputs": "<artifacts>/summary.json + launch/ + verify/; exit 0/1/2"
+    },
+    {
+      "id": "mobile/inject",
+      "entry": "orchestration/mobile/inject.sh",
+      "kind": "bash",
+      "purpose": "Install the mobile harness overlay (delegate + snapshots; full mode adds the app bridge with backups).",
+      "inputs": "--target --allow-dirty-harness-paths --force-overlay --no-git-exclude; env RECIPE_HARNESS_ROOT, METAMASK_RUNNER_PROTOCOL_ROOT>FARMSLOT_ROOT",
+      "outputs": "<harness>/manifest.json + runner/ + scripts/ + backup store; exit 0/1/2"
+    },
+    {
+      "id": "mobile/cleanup",
+      "entry": "orchestration/mobile/cleanup.sh",
+      "kind": "bash",
+      "purpose": "Remove the mobile overlay; restore backed-up product files; remove recorded git excludes.",
+      "inputs": "--target --allow-managed-changes; env RECIPE_HARNESS_ROOT",
+      "outputs": "removes <harness>/ + backups; exit 0/1/2"
+    },
+    {
+      "id": "extension/launch",
+      "entry": "orchestration/extension/launch.sh",
+      "kind": "bash",
+      "purpose": "Run the caller-supplied prepare command for one slot, then confirm app-control readiness.",
+      "inputs": "--target --cdp-port --prepare-cmd --artifacts-dir; env RECIPE_HARNESS_EXTENSION_LAUNCH_CMD",
+      "outputs": "<artifacts>/summary.json, logs/{launch.log,extension-readiness.json}; exit 0/1/2"
+    },
+    {
+      "id": "extension/live",
+      "entry": "orchestration/extension/live.sh",
+      "kind": "bash",
+      "purpose": "Sequencer: builds the prepare command from the named feature scripts, then launch + verify.",
+      "inputs": "--target --cdp-port --launch-existing-dist|--start-watch|--prepare-cmd --dist-dir --chrome-user-data-dir --out --artifacts-dir; env RECIPE_HARNESS_CHROME_BIN, RECIPE_WALLET_FIXTURE, RECIPE_HARNESS_LIVE_KEEP",
+      "outputs": "<artifacts>/summary.json + launch/ + verify/ + logs/fixture-source.json; exit 0/1/2"
+    },
+    {
+      "id": "extension/start-watch",
+      "entry": "orchestration/extension/start-watch.sh",
+      "kind": "bash",
+      "purpose": "Harness-owned webpack watcher: cache clear, dual-writer refusal, compile-marker wait, baseline record.",
+      "inputs": "--target --runtime-dir --runner-bin --summary",
+      "outputs": "<runtime-dir>/recipe-harness-webpack.{pid,log}; optional summary; exit 0/1/2"
+    },
+    {
+      "id": "extension/snapshot-dist",
+      "entry": "orchestration/extension/snapshot-dist.sh",
+      "kind": "bash",
+      "purpose": "Runtime-dist snapshot (rsync, excludes _metadata) with from-git-id freshness guard.",
+      "inputs": "--dist --runtime-dist --wait-iterations --summary",
+      "outputs": "<runtime-dist>/ snapshot; optional summary; exit 0/1/2"
+    },
+    {
+      "id": "extension/seed-fixture",
+      "entry": "orchestration/extension/seed-fixture.sh",
+      "kind": "bash",
+      "purpose": "Wallet fixture resolution chain + generate/prefill (pre-launch) and seed-cdp (post-launch) phases.",
+      "inputs": "resolve|prefill|seed-cdp; --target --cdp-port --fixture --state --profile --extension-dir --extension-id-file --out --source-out --fixture-script --summary; env RECIPE_WALLET_FIXTURE",
+      "outputs": "fixture path on stdout (resolve), provenance/state/parity JSON files; exit 0/1/2"
+    },
+    {
+      "id": "extension/launch-browser",
+      "entry": "orchestration/extension/launch-browser.cjs",
+      "kind": "node",
+      "purpose": "Low-level spawn primitive: detached Chrome with isolated profile, CDP on 127.0.0.1, unpacked dist.",
+      "inputs": "--cdp-port --chrome-bin --profile --extension-dir --chrome-log --chrome-pid",
+      "outputs": "pid file + append-log; exit 0 / non-zero"
+    },
+    {
+      "id": "extension/refresh-build",
+      "entry": "orchestration/extension/refresh-build.sh",
+      "kind": "bash",
+      "purpose": "One-shot rebuild for a frozen slot: yarn start, wait for entry points, kill watcher (fresh AND frozen).",
+      "inputs": "--repo --watcher-port --timeout --clean-timeout",
+      "outputs": "refreshed dist/chrome; exit 0/1/2"
+    },
+    {
+      "id": "extension/ensure-browser",
+      "entry": "orchestration/extension/ensure-browser.sh",
+      "kind": "bash",
+      "purpose": "Ensure the slot's Chromium is running against the existing dist/profile/port (kills + relaunches).",
+      "inputs": "--slot-id --repo --cdp-port --runtime-dir --watcher-port; env CHROME_USER_DATA_DIR, RECIPE_HARNESS_ROOT",
+      "outputs": "<runtime-dir>/{browser.pid,chromium.pid,extension.id}; exit 0/1"
+    },
+    {
+      "id": "extension/inject",
+      "entry": "orchestration/extension/inject.mjs",
+      "kind": "node",
+      "purpose": "Install the extension harness overlay (delegate, manifests, recipes, helper scripts).",
+      "inputs": "--target --no-git-exclude; env RECIPE_HARNESS_ROOT, METAMASK_RUNNER_DIR, METAMASK_RUNNER_PROTOCOL_ROOT>FARMSLOT_ROOT",
+      "outputs": "<harness>/{manifest.json,action-manifest.json,runner/,scripts/}; exit 0/2/non-zero"
+    },
+    {
+      "id": "extension/cleanup",
+      "entry": "orchestration/extension/cleanup.mjs",
+      "kind": "node",
+      "purpose": "Remove the extension overlay and exactly the recorded git-exclude entries.",
+      "inputs": "--target; env RECIPE_HARNESS_ROOT",
+      "outputs": "removes <harness>/extension; exit 0/2"
+    },
+    {
+      "id": "extension/sidepanel-toggle",
+      "entry": "orchestration/extension/sidepanel-toggle.sh",
+      "kind": "bash",
+      "purpose": "Window-mode control for the extension instance: chrome.sidePanel status/open/close/toggle/cycle over the instance's CDP port.",
+      "inputs": "<status|open|close|toggle|cycle> --cdp-port --ext-id --agent-dir --settle-ms; env REPO, CDP_PORT, EXT_ID, SETTLE_MS, AGENT_DIR",
+      "outputs": "status/progress on stdout; exit 0/1/2"
+    },
+    {
+      "id": "extension/readiness",
+      "entry": "orchestration/extension/readiness.mjs",
+      "kind": "node",
+      "purpose": "Health probe for one extension instance: dist entry files + live CDP target, repairs <runtime-dir>/extension.id.",
+      "inputs": "--target --cdp-port --json; env RECIPE_RUNTIME_DIR",
+      "outputs": "readiness report on stdout; exit 0 ready / non-zero"
+    },
+    {
+      "id": "extension/wallet-fixture-state",
+      "entry": "orchestration/extension/wallet-fixture-state.cjs",
+      "kind": "node",
+      "purpose": "Instance wallet state: generate deterministic state from a fixture, prefill the Chrome profile, seed/validate over CDP.",
+      "inputs": "generate|prefill-profile|seed-cdp + flags per usage(); env RECIPE_RUNTIME_DIR",
+      "outputs": "--out/--state JSON files; exit 0/1/2"
+    },
+    {
+      "id": "extension/extension-id",
+      "entry": "orchestration/extension/extension-id.ts",
+      "kind": "module",
+      "purpose": "Deterministic CRX id resolution from the loaded dist manifest key (TS module used by the runner CLI).",
+      "inputs": "resolveExtensionId(target)",
+      "outputs": "extension id string"
+    },
+    {
+      "id": "extension/ensure-ready",
+      "entry": "orchestration/extension/ensure-ready.ts",
+      "kind": "module",
+      "purpose": "Ensure the extension runtime is attachable (TS module used by the runner CLI).",
+      "inputs": "ensureExtensionReady(...)",
+      "outputs": "readiness result"
+    },
+    {
+      "id": "extension/runtime",
+      "entry": "orchestration/extension/runtime.ts",
+      "kind": "module",
+      "purpose": "Extension runtime prepare/health over CDP (TS module used by the runner CLI).",
+      "inputs": "prepareExtensionRuntime/checkExtensionRuntimeHealth",
+      "outputs": "runtime state"
+    },
+    {
+      "id": "extension/runtime-decision",
+      "entry": "orchestration/extension/runtime-decision.ts",
+      "kind": "module",
+      "purpose": "Cache/deps baseline + readiness decision (TS module used by the runner CLI).",
+      "inputs": "decideExtensionReadiness(...)",
+      "outputs": "decision record"
+    },
+    {
+      "id": "core/inject",
+      "entry": "orchestration/core/inject.sh",
+      "kind": "bash",
+      "purpose": "Headless core adapter install: overlay metadata + runner delegate only (no product writes).",
+      "inputs": "--target; env RECIPE_HARNESS_ROOT, METAMASK_RUNNER_PROTOCOL_ROOT>FARMSLOT_ROOT",
+      "outputs": "<harness>/core/{manifest.json,action-manifest.json,runner/}; exit 0/1/2"
+    },
+    {
+      "id": "core/cleanup",
+      "entry": "orchestration/core/cleanup.sh",
+      "kind": "bash",
+      "purpose": "Remove the core overlay dir (idempotent; nothing to restore).",
+      "inputs": "--target; env RECIPE_HARNESS_ROOT",
+      "outputs": "removes <harness>/core; exit 0/2"
+    },
+    {
+      "id": "lib/harness-path",
+      "entry": "orchestration/lib/harness-path.sh",
+      "kind": "lib",
+      "purpose": "THE one sourceable lib: harness root/dir + runtime dir resolution with path validation.",
+      "inputs": "env RECIPE_HARNESS_ROOT, RECIPE_RUNTIME_DIR (validated relative paths)",
+      "outputs": "harness_root / harness_dir / recipe_runtime_dir functions"
+    },
+    {
+      "id": "lib/hash-helpers",
+      "entry": "orchestration/lib/hash-helpers.sh",
+      "kind": "lib",
+      "purpose": "Overlay file hash markers (digest_file/digest_stdin/hash_path) for safe re-install/cleanup.",
+      "inputs": "TARGET env var (hash_path)",
+      "outputs": "sha256 digests on stdout"
+    },
+    {
+      "id": "lib/json-field",
+      "entry": "orchestration/lib/json-field.sh",
+      "kind": "lib",
+      "purpose": "read_runtime_context_field: dotted-path JSON reader for harness scripts.",
+      "inputs": "json path + dotted field",
+      "outputs": "field value on stdout"
+    },
+    {
+      "id": "lib/recipe-paths",
+      "entry": "orchestration/lib/recipe-paths.mjs",
+      "kind": "lib",
+      "purpose": "ESM mirror of harness-path defaults/validation for node scripts.",
+      "inputs": "env RECIPE_HARNESS_ROOT, RECIPE_RUNTIME_DIR",
+      "outputs": "recipeHarnessRoot()/recipeRuntimeDir() exports"
+    },
+    {
+      "id": "lib/path-defaults",
+      "entry": "orchestration/lib/path-defaults.json",
+      "kind": "data",
+      "purpose": "Single source for the default harness root and runtime dir.",
+      "inputs": "none",
+      "outputs": "recipeHarnessRoot / recipeRuntimeDir defaults"
+    },
+    {
+      "id": "compat-overlays/mobile",
+      "entry": "orchestration/compat-overlays/mobile",
+      "kind": "compat-overlay",
+      "purpose": "Historical-commit replay support: reversible source overlays (e.g. rn81-message-event-source.patch) applied manually/via the recipe-harness skill so pre-RN-0.81 mobile checkouts boot and bridge under the current toolchain.",
+      "inputs": "manual `git apply` in the historical product checkout (no in-repo apply logic)",
+      "outputs": "patched historical checkout (reversible via git apply -R); overlay path recorded in eval evidence"
+    }
+  ]
+}

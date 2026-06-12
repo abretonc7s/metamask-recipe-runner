@@ -31,8 +31,8 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 runner="$script_dir/metamask-recipe"
 runner_root="$(cd "$script_dir/.." && pwd -P)"
 # shellcheck disable=SC1091
-. "$runner_root/scripts/lib/harness-path.sh"
-install_script="$runner_root/scripts/inject-extension-harness.mjs"
+. "$runner_root/orchestration/lib/harness-path.sh"
+install_script="$runner_root/orchestration/extension/inject.mjs"
 
 find_extension_root() {
   local dir="$(pwd -P)"

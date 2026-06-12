@@ -11,8 +11,9 @@
     "allowImportingTsExtensions": true
   },
   "include": [
-    "src/**/*.ts",
-    "live-adapters/**/*.mjs",
+    "runner/**/*.ts",
+    "orchestration/**/*.ts",
+    "library/**/*.mjs",
     "scripts/**/*.mjs"
   ]
 }
