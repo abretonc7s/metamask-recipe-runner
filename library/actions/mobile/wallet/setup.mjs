@@ -3,7 +3,7 @@ import { spawn } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { bridgeCommand, bridgeEnv, runAdapter } from '../platform/bridge.mjs';
-import { walletFixturePath } from '../../../src/paths.ts';
+import { walletFixturePath } from '../../../../runner/src/paths.ts';
 
 async function fixtureProfile(projectRoot) {
   const candidates = [

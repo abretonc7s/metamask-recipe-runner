@@ -8,7 +8,7 @@ import { mnemonicToAccount, privateKeyToAccount } from 'viem/accounts';
 // this adapter under the bundled tsx (see commandFor/importsSourceTypescript in
 // src/live-adapter-contract.ts). The core adapter dynamic-imports the perps
 // controller TypeScript at runtime, so it MUST run under tsx, not plain node.
-import { walletFixturePath } from '../../../src/paths.ts';
+import { walletFixturePath } from '../../../../runner/src/paths.ts';
 
 // Shared headless instantiation for the MetaMask `core` adapter.
 //

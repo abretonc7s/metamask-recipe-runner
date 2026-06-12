@@ -10,7 +10,7 @@ import {
   extensionIdPath,
   recipeHarnessPath,
   walletFixturePath,
-} from '../../../src/paths.ts';
+} from '../../../../runner/src/paths.ts';
 
 // Resolve the Farmslot harness through normal package dependencies by default.
 // Local Farmslot source is only a dev override handled by src/paths.ts.

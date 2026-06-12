@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { bridgeCommand, runAdapter } from '../platform/bridge.mjs';
-import { walletFixturePath } from '../../../src/paths.ts';
+import { walletFixturePath } from '../../../../runner/src/paths.ts';
 
 async function fixturePassword(projectRoot) {
   const candidates = [
