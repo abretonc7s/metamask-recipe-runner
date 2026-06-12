@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 # verify.sh — extension slot verification (readiness/proof layer)
-# (formerly: scripts/extension/verify.sh)
 #
 # Purpose:
 #   Recipe-tree verification for ONE extension instance: static dist checks,

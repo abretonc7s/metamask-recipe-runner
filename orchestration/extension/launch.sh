@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 # launch.sh — extension instance launch: prepare command + CDP readiness
-# (formerly: scripts/extension/launch.sh)
 #
 # Purpose:
 #   Runs the caller-supplied prepare command (cwd = target) for one slot,

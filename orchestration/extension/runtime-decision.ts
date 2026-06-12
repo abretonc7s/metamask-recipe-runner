@@ -1,5 +1,4 @@
 // runtime-decision.ts — cache/deps baseline + readiness decision.
-// (formerly: src/extension-runtime-decision.ts,
 //  runner/extension/extension-runtime-decision.ts) App/instance control.
 import { execFileSync } from 'node:child_process';
 import crypto from 'node:crypto';

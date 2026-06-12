@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 // inject.mjs — install the extension harness overlay
-// (formerly: scripts/inject-extension-harness.mjs)
 //
 // Purpose:
 //   Installs the runner delegate, action manifests, recipe snapshots and

@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 # inject.sh — install the mobile harness overlay into a checkout
-# (formerly: scripts/inject-mobile-harness.sh)
 #
 # Purpose:
 #   Installs the runner delegate + recipe/script snapshots into the target's

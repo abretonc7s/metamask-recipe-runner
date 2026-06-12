@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 # seed-fixture.sh — wallet fixture resolution chain + generate/prefill/seed
-# (formerly: resolve_wallet_fixture and the fixture parts of the
 # prepare_parts mega-string in scripts/extension/live.sh)
 #
 # Purpose:

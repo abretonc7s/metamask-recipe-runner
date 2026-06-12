@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 # cleanup.sh — remove the headless `core` adapter overlay.
-# (formerly: scripts/cleanup-core-harness.sh)
 #
 # Inputs: --target <metamask-core> (default $PWD); env RECIPE_HARNESS_ROOT.
 # Outputs: removes <harness>/core. Exit 0 — cleaned (idempotent); 2 — bad args.

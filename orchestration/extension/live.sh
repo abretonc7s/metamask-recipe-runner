@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 # live.sh — extension launch-then-verify sequencer for one live slot run
-# (formerly: scripts/extension/live.sh, including the prepare_parts
 # mega-string now decomposed into start-watch.sh / snapshot-dist.sh /
 # seed-fixture.sh)
 #

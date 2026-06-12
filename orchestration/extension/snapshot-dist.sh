@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 # snapshot-dist.sh — runtime-dist snapshot with git-id freshness guard
-# (formerly: the dist wait/rsync/guard parts of the prepare_parts
 # mega-string in scripts/extension/live.sh)
 #
 # Purpose:

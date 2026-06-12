@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 // wallet-fixture-state.cjs — wallet fixture state generate/prefill/seed
-// (formerly: scripts/extension/wallet-fixture-state.cjs,
 //  runner/extension/wallet-fixture-state.cjs)
 //
 // Purpose:

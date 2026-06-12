@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 // readiness.mjs — health probe for one extension instance
-// (formerly: scripts/extension/extension-readiness.mjs,
 //  runner/extension/extension-readiness.mjs)
 //
 // Purpose:

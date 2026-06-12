@@ -1,5 +1,4 @@
 // runtime.ts — extension runtime prepare/health over CDP.
-// (formerly: src/extension-runtime.ts, runner/extension/extension-runtime.ts)
 // App/instance control.
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';

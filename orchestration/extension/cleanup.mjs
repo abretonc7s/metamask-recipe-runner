@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 // cleanup.mjs — remove the extension harness overlay
-// (formerly: scripts/cleanup-extension-harness.mjs)
 //
 // Purpose:
 //   Removes exactly the .git/info/exclude entries the install recorded,

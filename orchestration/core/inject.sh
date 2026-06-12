@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 # inject.sh — headless `core` adapter install.
-# (formerly: scripts/inject-core-harness.sh)
 #
 # Inputs: --target <metamask-core> (default $PWD); env RECIPE_HARNESS_ROOT,
 #   METAMASK_RUNNER_PROTOCOL_ROOT > FARMSLOT_ROOT > <runner>/.farmslot-root.

@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 # start-watch.sh — harness-owned webpack watcher with dual-writer prevention
-# (formerly: the --start-watch block of the prepare_parts mega-string in
 # scripts/extension/live.sh)
 #
 # Purpose:

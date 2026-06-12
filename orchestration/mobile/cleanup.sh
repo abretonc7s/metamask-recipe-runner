@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 # cleanup.sh — remove the mobile harness overlay from a checkout
-# (formerly: scripts/cleanup-mobile-harness.sh)
 #
 # Purpose:
 #   Restores backed-up product files (full installs), removes exactly the

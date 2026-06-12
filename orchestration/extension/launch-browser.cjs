@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 // launch-browser.cjs — per-instance isolated detached Chrome spawn
-// (formerly: scripts/extension/launch-chrome-detached.cjs)
 //
 // Purpose:
 //   Spawns a detached Chrome bound to 127.0.0.1:<cdp-port> with its own

@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 # verify.sh — mobile slot verification (readiness/proof layer)
-# (formerly: scripts/mobile/verify.sh)
 #
 # Purpose:
 #   Recipe-tree verification for ONE mobile instance: static checks plus

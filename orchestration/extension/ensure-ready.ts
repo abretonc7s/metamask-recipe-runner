@@ -1,5 +1,4 @@
 // ensure-ready.ts — ensure the extension runtime is attachable.
-// (formerly: src/extension-ensure-ready.ts,
 //  runner/extension/extension-ensure-ready.ts) App/instance control.
 import path from 'node:path';
 

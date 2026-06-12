@@ -1,5 +1,5 @@
 #!/bin/bash
-# Contract test: orchestration/extension/launch-browser.cjs (formerly launch-chrome-detached.cjs)
+# Contract test: orchestration/extension/launch-browser.cjs
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/helpers.sh"
 ct_init

@@ -3,7 +3,6 @@
 # (auto-detects the slot, kills any existing browser by recorded PID,
 # relaunches against the existing dist/profile/port; requires an
 # already-prepared profile). Project-specific (MetaMask Extension).
-# (formerly: scripts/extension/reopen-browser.sh)
 #
 # Purpose:
 #   Restarts the slot's Chromium against the existing profile + dist build,

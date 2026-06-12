@@ -1,5 +1,5 @@
 #!/bin/bash
-# Contract test: orchestration/extension/ensure-browser.sh (formerly reopen-browser.sh)
+# Contract test: orchestration/extension/ensure-browser.sh
 # No Chrome/Playwright: exercises the documented arg + preflight contract.
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/helpers.sh"
