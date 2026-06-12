@@ -264,7 +264,7 @@ if (!runnerDir) {
   process.stdout.write(JSON.stringify({ name, status: 'warn', detail: 'runner source unavailable; overlay freshness compare skipped' }));
   process.exit(0);
 }
-const overlayDir = path.join(runnerDir, 'live-adapters', 'mobile', 'app-overlay', 'app', 'core', 'AgenticService');
+const overlayDir = path.join(runnerDir, 'library', 'actions', 'mobile', 'app-overlay', 'app', 'core', 'AgenticService');
 let checked = 0;
 const drifted = [];
 const missing = [];

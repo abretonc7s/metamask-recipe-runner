@@ -2,8 +2,8 @@ import http from 'node:http';
 import path from 'node:path';
 import { compatibilityMode, fixtureSummary, repoShape } from './doctor.ts';
 import { runLiveAdapterScript } from './live-adapter-contract.ts';
-import { withExtensionPage } from '../../live-adapters/extension/platform/cdp.mjs';
-import { bridgeCommand, evalSync, simulatorScreenshot } from '../../live-adapters/mobile/platform/bridge.mjs';
+import { withExtensionPage } from '../../library/actions/extension/platform/cdp.mjs';
+import { bridgeCommand, evalSync, simulatorScreenshot } from '../../library/actions/mobile/platform/bridge.mjs';
 import type {
   ActionAdapter,
   ActionExecutionContext,
@@ -108,9 +108,9 @@ async function runLiveFirst(
 
 function liveAdapterPathHint(platform: MetaMaskRecipeAdapter, action: string) {
   if (action.startsWith('metamask.')) {
-    return `live-adapters/${platform}/${action.replace(/^metamask[.]/u, '').replaceAll('.', '/')}.mjs`;
+    return `library/actions/${platform}/${action.replace(/^metamask[.]/u, '').replaceAll('.', '/')}.mjs`;
   }
-  return `live-adapters/${platform}/${action.replaceAll('.', '/')}.mjs`;
+  return `library/actions/${platform}/${action.replaceAll('.', '/')}.mjs`;
 }
 
 async function semanticResult(
@@ -126,7 +126,7 @@ async function semanticResult(
     throw new Error(
       `${action} requires a live ${platform} adapter that drives a real supported app/API path; ` +
         `no adapter script was found or no live runtime is configured (for example ${expected}). Static placeholders are refused to avoid fabricated proof. ` +
-        'Set METAMASK_RECIPE_LIVE_ADAPTER_DIR or add a runner live-adapters script.',
+        'Set METAMASK_RECIPE_LIVE_ADAPTER_DIR or add a runner library/actions script.',
     );
   }
   const output = { platform, action, redacted: true };
@@ -284,7 +284,7 @@ function mobileProbeOutput(status: unknown, input: MetaMaskUiActionInput, projec
 }
 
 function mobileBridgePath(_projectRoot: string): string {
-  return process.env.METAMASK_RECIPE_MOBILE_BRIDGE_SCRIPT || 'runner:live-adapters/mobile/bridge-runtime/cdp-bridge.cjs';
+  return process.env.METAMASK_RECIPE_MOBILE_BRIDGE_SCRIPT || 'runner:library/actions/mobile/bridge-runtime/cdp-bridge.cjs';
 }
 
 async function waitForMobileTarget(input: ReturnType<typeof uiInputFor>, payload: ActionNode) {
@@ -382,7 +382,7 @@ async function handleMobileNavigate(payload: ActionNode, context: ActionExecutio
     node: payload,
     context,
   });
-  if (!live) throw new Error('ui.navigate requires live-adapters/mobile/ui/navigate.mjs.');
+  if (!live) throw new Error('ui.navigate requires library/actions/mobile/ui/navigate.mjs.');
   return isRecord(live.result) ? { ...live.result, liveAdapter: live.script } : live.result;
 }
 
@@ -530,7 +530,7 @@ export function createMetaMaskUiTransport(
       if (action === 'ui.navigate') {
         const live = await runLiveFirst(platform, action, node, context);
         if (live) return live.output;
-        throw new Error(`ui.navigate requires live-adapters/${platform}/ui/navigate.mjs.`);
+        throw new Error(`ui.navigate requires library/actions/${platform}/ui/navigate.mjs.`);
       }
       return base.execute(action, node, context);
     },

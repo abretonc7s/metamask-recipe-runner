@@ -15,7 +15,7 @@ import { decideExtensionReadiness } from '../extension/extension-runtime-decisio
 // local harness packages built. Keep this lazy.
 import { loadActionManifest, validateManifest } from './manifest.ts';
 import { assertAdapter, manifestPath, recipeHarnessPath, recipeHarnessRoot, recipePath, recipeRuntimeDir, runnerDir } from './paths.ts';
-// runner.ts → adapters.ts → live-adapters/extension/platform/cdp.mjs does a
+// runner.ts → adapters.ts → library/actions/extension/platform/cdp.mjs does a
 // top-level harness import, so it is imported LAZILY inside
 // runRecipe only. Keeping it static would load the recipe harness for every
 // command (manifest, doctor, runtime-decision), defeating their independence.

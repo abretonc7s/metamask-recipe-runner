@@ -43,7 +43,7 @@ done
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 RUNNER_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd -P)"
-ADAPTER_DIR="$RUNNER_DIR/live-adapters/mobile"
+ADAPTER_DIR="$RUNNER_DIR/library/actions/mobile"
 # shellcheck disable=SC1091
 . "$SCRIPT_DIR/../lib/hash-helpers.sh"
 # shellcheck disable=SC1091

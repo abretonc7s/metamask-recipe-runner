@@ -41,7 +41,7 @@ function candidatePaths(platform: string, action: string) {
   const families = candidateFamilies(action);
   const roots = [
     process.env.METAMASK_RECIPE_LIVE_ADAPTER_DIR,
-    path.join(runnerDir, 'live-adapters'),
+    path.join(runnerDir, 'library/actions'),
   ].filter(Boolean);
   const files = [];
   for (const root of roots) {
