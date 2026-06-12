@@ -151,7 +151,11 @@ NODE
       exit 1
     fi
   else
-    CHROME_BIN="$(cd "$TARGET" && node <<'NODE' || true
+    # bash 3.2 (macOS /bin/bash) mis-parses heredocs inside $(...): its scanner
+    # trips on quotes/backticks in the JS. Write the probe to a temp file and
+    # command-substitute a plain `node` invocation instead.
+    _chrome_probe="$(mktemp -t chrome-probe-XXXXXX)"
+    cat > "$_chrome_probe" <<'NODE'
 const fs = require('fs');
 
 let chromium = null;
@@ -187,7 +191,8 @@ if (!fs.existsSync(executable)) {
 
 process.stdout.write(executable);
 NODE
-)"
+    CHROME_BIN="$(cd "$TARGET" && node "$_chrome_probe" || true)"
+    rm -f "$_chrome_probe"
     if [ -z "$CHROME_BIN" ]; then
       echo "[recipe-harness] No approved Chromium binary selected; stopping before live Extension launch." >&2
       exit 1
