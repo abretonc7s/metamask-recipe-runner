@@ -85,6 +85,7 @@ copyDir(path.join(runnerDir, 'scripts/extension'), path.join(harnessDir, 'script
 // Moved features live in orchestration/; overwrite the forwarding shims so
 // the installed copy keeps the real scripts (same installed layout).
 copyFile(path.join(runnerDir, 'orchestration/extension/launch-chrome-detached.cjs'), path.join(harnessDir, 'scripts/launch-chrome-detached.cjs'));
+copyFile(path.join(runnerDir, 'orchestration/extension/launch.sh'), path.join(harnessDir, 'scripts/launch.sh'));
 copyFile(path.join(runnerDir, 'orchestration/extension/refresh-build.sh'), path.join(harnessDir, 'scripts/refresh-build.sh'));
 copyFile(path.join(runnerDir, 'orchestration/extension/reopen-browser.sh'), path.join(harnessDir, 'scripts/reopen-browser.sh'));
 copyFile(path.join(runnerDir, 'orchestration/lib/harness-path.sh'), path.join(harnessDir, 'scripts/lib/harness-path.sh'));
