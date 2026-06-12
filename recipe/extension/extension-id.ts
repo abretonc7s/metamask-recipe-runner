@@ -1,3 +1,6 @@
+// extension-id.ts — deterministic extension id resolution (recipe tree;
+// formerly src/extension-id.ts). Product control: derives the id from the
+// loaded dist manifest key.
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';

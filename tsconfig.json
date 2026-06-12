@@ -12,6 +12,7 @@
   },
   "include": [
     "src/**/*.ts",
+    "recipe/**/*.ts",
     "live-adapters/**/*.mjs",
     "scripts/**/*.mjs"
   ]

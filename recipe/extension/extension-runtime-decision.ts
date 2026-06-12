@@ -1,9 +1,11 @@
+// extension-runtime-decision.ts — cache/deps baseline + readiness decision
+// (recipe tree; formerly src/extension-runtime-decision.ts).
 import { execFileSync } from 'node:child_process';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { recipeWatchLogCandidates } from './paths.ts';
+import { recipeWatchLogCandidates } from '../../src/paths.ts';
 
 /**
  * Deterministic runtime-readiness decision for the MetaMask Extension.

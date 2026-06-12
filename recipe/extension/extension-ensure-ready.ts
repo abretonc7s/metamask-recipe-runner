@@ -1,3 +1,5 @@
+// extension-ensure-ready.ts — ensure the extension runtime is attachable
+// (recipe tree; formerly src/extension-ensure-ready.ts).
 import path from 'node:path';
 
 import { resolveExtensionId } from './extension-id.ts';
