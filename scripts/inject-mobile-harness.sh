@@ -159,6 +159,9 @@ install_v1_runner_assets() {
   fi
   if [ -d "$METAMASK_RUNNER_DIR/scripts/mobile" ]; then
     rsync -a --delete "$METAMASK_RUNNER_DIR/scripts/mobile/" "$HARNESS_DIR/scripts/"
+    # Moved features live in orchestration/; overwrite the forwarding shims so
+    # the installed copy keeps the real scripts (same installed layout).
+    cp "$METAMASK_RUNNER_DIR/orchestration/mobile/launch.sh" "$HARNESS_DIR/scripts/launch.sh"
     mkdir -p "$HARNESS_DIR/scripts/lib"
     cp "$METAMASK_RUNNER_DIR/orchestration/lib/harness-path.sh" "$HARNESS_DIR/scripts/lib/harness-path.sh"
     cp "$METAMASK_RUNNER_DIR/orchestration/lib/path-defaults.json" "$HARNESS_DIR/scripts/lib/path-defaults.json"
