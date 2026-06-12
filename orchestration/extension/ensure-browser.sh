@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # ensure-browser.sh — ensure the slot's Playwright Chromium is running
 # (auto-detects the slot, kills any existing browser by recorded PID,
 # relaunches against the existing dist/profile/port; requires an

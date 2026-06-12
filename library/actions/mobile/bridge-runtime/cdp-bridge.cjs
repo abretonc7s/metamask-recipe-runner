@@ -4,10 +4,10 @@
  * CDP Bridge — Connect to the running MetaMask app via Hermes Chrome DevTools Protocol.
  *
  * Usage:
- *   node live-adapters/mobile/bridge-runtime/cdp-bridge.cjs navigate PerpsMarketListView
- *   node live-adapters/mobile/bridge-runtime/cdp-bridge.cjs get-route
- *   node live-adapters/mobile/bridge-runtime/cdp-bridge.cjs get-state "engine.backgroundState.NetworkController"
- *   node live-adapters/mobile/bridge-runtime/cdp-bridge.cjs eval "1+1"
+ *   node library/actions/mobile/bridge-runtime/cdp-bridge.cjs navigate PerpsMarketListView
+ *   node library/actions/mobile/bridge-runtime/cdp-bridge.cjs get-route
+ *   node library/actions/mobile/bridge-runtime/cdp-bridge.cjs get-state "engine.backgroundState.NetworkController"
+ *   node library/actions/mobile/bridge-runtime/cdp-bridge.cjs eval "1+1"
  *
  * Environment:
  *   WATCHER_PORT  Metro port (default: 8081, read from .js.env if present)
@@ -597,7 +597,7 @@ async function main() {
     console.log(`CDP Bridge — interact with the running MetaMask app via Hermes CDP
 
 Usage:
-  node live-adapters/mobile/bridge-runtime/cdp-bridge.cjs <command> [args...]
+  node library/actions/mobile/bridge-runtime/cdp-bridge.cjs <command> [args...]
 
 Commands:
   navigate <RouteName> [params-json]   Navigate to a screen

@@ -14,6 +14,11 @@ set -uo pipefail
 
 CT_REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
+# Colorized environments must not leak ANSI escapes into captured output
+# (broke ct_assert_json_field comparisons in reviewer environments).
+export NO_COLOR=1
+export FORCE_COLOR=0
+
 ct_init() {
   CT_TMP="$(mktemp -d -t contract-XXXXXX)"
   trap 'rm -rf "$CT_TMP"' EXIT

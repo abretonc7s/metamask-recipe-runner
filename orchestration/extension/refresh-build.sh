@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # refresh-build.sh — one-shot rebuild for a frozen extension slot
 #
 # Usage:

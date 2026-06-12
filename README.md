@@ -82,7 +82,7 @@ Defaults for installed harness/runtime paths live in
 
 ```bash
 yarn check
-bash -n bin/metamask-recipe bin/mm-recipe bin/mme-recipe orchestration/{mobile,extension,core}/*.sh recipe/{mobile,extension}/*.sh
+bash -n bin/metamask-recipe bin/mm-recipe bin/mme-recipe orchestration/{mobile,extension,core}/*.sh runner/{mobile,extension}/verify.sh
 node --check orchestration/extension/inject.mjs orchestration/extension/cleanup.mjs orchestration/extension/readiness.mjs orchestration/extension/launch-browser.cjs orchestration/lib/recipe-paths.mjs scripts/check.mjs
 ```
 
