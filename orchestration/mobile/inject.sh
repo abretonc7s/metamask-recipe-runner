@@ -179,9 +179,9 @@ install_v1_runner_assets() {
     printf '%s\n' "$METAMASK_RUNNER_PROTOCOL_ROOT" > "$HARNESS_DIR/runner/.farmslot-root"
   fi
   printf '%s\n' "$METAMASK_RUNNER_DIR" > "$HARNESS_DIR/runner/.runner-source"
-  cp "$METAMASK_RUNNER_DIR/manifests/mobile.action-manifest.json" "$HARNESS_DIR/action-manifest.json"
-  cp "$METAMASK_RUNNER_DIR/manifests/mobile.action-manifest.json" "$HARNESS_DIR/runner/manifests/mobile.action-manifest.json"
-  cp "$METAMASK_RUNNER_DIR/manifests/extension.action-manifest.json" "$HARNESS_DIR/runner/manifests/extension.action-manifest.json"
+  cp "$METAMASK_RUNNER_DIR/library/manifests/mobile.action-manifest.json" "$HARNESS_DIR/action-manifest.json"
+  cp "$METAMASK_RUNNER_DIR/library/manifests/mobile.action-manifest.json" "$HARNESS_DIR/runner/manifests/mobile.action-manifest.json"
+  cp "$METAMASK_RUNNER_DIR/library/manifests/extension.action-manifest.json" "$HARNESS_DIR/runner/manifests/extension.action-manifest.json"
   if [ -d "$METAMASK_RUNNER_DIR/recipes" ]; then
     rsync -a --delete "$METAMASK_RUNNER_DIR/recipes/" "$HARNESS_DIR/runner/recipes/"
   fi

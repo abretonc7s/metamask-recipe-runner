@@ -98,10 +98,10 @@ install_v1_runner_assets() {
   printf '%s\n' "$METAMASK_RUNNER_DIR" > "$HARNESS_DIR/runner/.runner-source"
   # resolve-runner-source.sh requires mobile + extension manifests to consider a
   # runner valid, so the installed delegate must carry them alongside core's.
-  cp "$METAMASK_RUNNER_DIR/manifests/core.action-manifest.json" "$HARNESS_DIR/action-manifest.json"
-  cp "$METAMASK_RUNNER_DIR/manifests/core.action-manifest.json" "$HARNESS_DIR/runner/manifests/core.action-manifest.json"
-  cp "$METAMASK_RUNNER_DIR/manifests/mobile.action-manifest.json" "$HARNESS_DIR/runner/manifests/mobile.action-manifest.json"
-  cp "$METAMASK_RUNNER_DIR/manifests/extension.action-manifest.json" "$HARNESS_DIR/runner/manifests/extension.action-manifest.json"
+  cp "$METAMASK_RUNNER_DIR/library/manifests/core.action-manifest.json" "$HARNESS_DIR/action-manifest.json"
+  cp "$METAMASK_RUNNER_DIR/library/manifests/core.action-manifest.json" "$HARNESS_DIR/runner/manifests/core.action-manifest.json"
+  cp "$METAMASK_RUNNER_DIR/library/manifests/mobile.action-manifest.json" "$HARNESS_DIR/runner/manifests/mobile.action-manifest.json"
+  cp "$METAMASK_RUNNER_DIR/library/manifests/extension.action-manifest.json" "$HARNESS_DIR/runner/manifests/extension.action-manifest.json"
   if [ -d "$METAMASK_RUNNER_DIR/recipes" ]; then
     rsync -a --delete "$METAMASK_RUNNER_DIR/recipes/" "$HARNESS_DIR/runner/recipes/"
   fi

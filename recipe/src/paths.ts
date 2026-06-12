@@ -120,7 +120,7 @@ export function assertAdapter(adapter: unknown): asserts adapter is MetaMaskReci
 
 export function manifestPath(adapter: MetaMaskRecipeAdapter) {
   assertAdapter(adapter);
-  return path.join(runnerDir, 'manifests', `${adapter}.action-manifest.json`);
+  return path.join(runnerDir, 'library/manifests', `${adapter}.action-manifest.json`);
 }
 
 export function recipePath(name: string) {

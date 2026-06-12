@@ -39,7 +39,6 @@
     "scripts",
     "orchestration",
     "recipe",
-    "manifests",
     "recipes",
     "library",
     "docs",

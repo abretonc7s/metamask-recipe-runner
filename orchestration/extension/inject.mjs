@@ -77,9 +77,9 @@ const delegate = [
 fs.writeFileSync(path.join(harnessDir, 'runner/bin/metamask-recipe'), delegate, { mode: 0o755 });
 if (protocolRoot) fs.writeFileSync(path.join(harnessDir, 'runner/.farmslot-root'), `${protocolRoot}\n`);
 fs.writeFileSync(path.join(harnessDir, 'runner/.runner-source'), `${runnerDir}\n`);
-copyFile(path.join(runnerDir, 'manifests/mobile.action-manifest.json'), path.join(harnessDir, 'runner/manifests/mobile.action-manifest.json'));
-copyFile(path.join(runnerDir, 'manifests/extension.action-manifest.json'), path.join(harnessDir, 'runner/manifests/extension.action-manifest.json'));
-copyFile(path.join(runnerDir, 'manifests/extension.action-manifest.json'), path.join(harnessDir, 'action-manifest.json'));
+copyFile(path.join(runnerDir, 'library/manifests/mobile.action-manifest.json'), path.join(harnessDir, 'runner/manifests/mobile.action-manifest.json'));
+copyFile(path.join(runnerDir, 'library/manifests/extension.action-manifest.json'), path.join(harnessDir, 'runner/manifests/extension.action-manifest.json'));
+copyFile(path.join(runnerDir, 'library/manifests/extension.action-manifest.json'), path.join(harnessDir, 'action-manifest.json'));
 copyDir(path.join(runnerDir, 'recipes'), path.join(harnessDir, 'runner/recipes'));
 copyDir(path.join(runnerDir, 'scripts/extension'), path.join(harnessDir, 'scripts'));
 // Moved features live in orchestration/; overwrite the forwarding shims so
