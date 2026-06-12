@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # sidepanel-toggle.sh — window-mode control for the extension instance.
-# (formerly: scripts/extension/sidepanel-toggle.sh, recipe/extension/...)
+# (formerly: scripts/extension/sidepanel-toggle.sh, runner/extension/...)
 #
 # Purpose:
 #   App control: drives chrome.sidePanel for one extension instance's CDP

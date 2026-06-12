@@ -56,9 +56,9 @@ if ! command -v harness_root >/dev/null 2>&1; then
   exit 1
 fi
 # verify.sh is a recipe-tree feature: co-located in installed copies, under
-# recipe/mobile in a repo checkout.
+# runner/mobile in a repo checkout.
 VERIFY_SH=""
-for _v in "$SCRIPT_DIR/verify.sh" "$SCRIPT_DIR/../../recipe/mobile/verify.sh"; do
+for _v in "$SCRIPT_DIR/verify.sh" "$SCRIPT_DIR/../../runner/mobile/verify.sh"; do
   [ -f "$_v" ] && { VERIFY_SH="$_v"; break; }
 done
 unset _v

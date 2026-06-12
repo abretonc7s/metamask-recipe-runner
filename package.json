@@ -23,12 +23,12 @@
     "@types/node": "^22.0.0",
     "typescript": "^5.6.0"
   },
-  "main": "./recipe/src/index.ts",
-  "types": "./recipe/src/index.ts",
+  "main": "./runner/src/index.ts",
+  "types": "./runner/src/index.ts",
   "exports": {
     ".": {
-      "types": "./recipe/src/index.ts",
-      "import": "./recipe/src/index.ts"
+      "types": "./runner/src/index.ts",
+      "import": "./runner/src/index.ts"
     }
   },
   "publishConfig": {
@@ -38,7 +38,7 @@
     "bin",
     "scripts",
     "orchestration",
-    "recipe",
+    "runner",
     "library",
     "docs",
     "README.md",

@@ -1,11 +1,11 @@
 #!/bin/bash
-# Contract test: recipe/mobile/verify.sh
+# Contract test: runner/mobile/verify.sh
 # No simulator/runner: exercises the documented arg + gate contract.
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/helpers.sh"
 ct_init
 
-VF="$CT_REPO_ROOT/recipe/mobile/verify.sh"
+VF="$CT_REPO_ROOT/runner/mobile/verify.sh"
 
 # --help exits 0
 ct_run 0 timeout 60 bash "$VF" --help

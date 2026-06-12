@@ -1,11 +1,11 @@
 #!/bin/bash
-# Contract test: recipe/extension/verify.sh
+# Contract test: runner/extension/verify.sh
 # No CDP/runner: exercises the documented arg + --out safety contract.
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/helpers.sh"
 ct_init
 
-VF="$CT_REPO_ROOT/recipe/extension/verify.sh"
+VF="$CT_REPO_ROOT/runner/extension/verify.sh"
 
 # --help exits 0
 ct_run 0 timeout 60 bash "$VF" --help

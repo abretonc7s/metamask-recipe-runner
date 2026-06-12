@@ -28,12 +28,13 @@ manifest.
 
 ```text
 metamask-recipe prepare   # runtime/orchestration: app is ready
-metamask-recipe run       # recipe/proof: actions execute and evidence is saved
+metamask-recipe run       # runner/proof: actions execute and evidence is saved
 ```
 
-Do not mix those layers. recipe/ = define, execute, verify, and evidence
-proofs. orchestration/ = control the app and its instances (start, windows,
-wallet state, health, ports, parallel).
+Do not mix those layers. library/ = what recipes ARE (recipes, actions,
+manifests — the content). runner/ = what EXECUTES them (engine, verify,
+evidence). orchestration/ = what CONTROLS the app and its instances (start,
+windows, wallet state, health, ports, parallel).
 
 ## Useful commands
 
@@ -54,13 +55,13 @@ metamask-recipe ensure-ready --adapter extension --target <extension> --cdp-port
 
 ```text
 bin/            CLI and platform convenience commands
-recipe/         the proof system only: engine glue (recipe/src) +
-                per-platform verify (define, execute, verify, evidence)
-orchestration/  ALL app & instance control: launch/live/watch/windows/
-                wallet state/health/inject/cleanup per platform, shared
-                lib, manifest.json + doctor.mjs
-library/        content: actions/ (per-platform action implementations),
-                manifests/ (action manifests), recipes/ (reusable recipes)
+runner/         what EXECUTES recipes: engine glue (runner/src) +
+                per-platform verify (engine, verify, evidence)
+orchestration/  what CONTROLS the app and its instances: launch/live/
+                watch/windows/wallet state/health/inject/cleanup per
+                platform, shared lib, manifest.json + doctor.mjs
+library/        what recipes ARE: recipes/ (recipe JSONs), actions/
+                (per-platform implementations), manifests/ (capability)
 scripts/        dev tooling (yarn check, local farmslot link, e2e validation)
 docs/           details when this README is not enough
 ```
@@ -82,7 +83,7 @@ Defaults for installed harness/runtime paths live in
 ```bash
 yarn check
 bash -n bin/metamask-recipe bin/mm-recipe bin/mme-recipe orchestration/{mobile,extension,core}/*.sh recipe/{mobile,extension}/*.sh
-node --check orchestration/extension/inject.mjs orchestration/extension/cleanup.mjs recipe/extension/extension-readiness.mjs orchestration/extension/launch-browser.cjs orchestration/lib/recipe-paths.mjs scripts/check.mjs
+node --check orchestration/extension/inject.mjs orchestration/extension/cleanup.mjs orchestration/extension/readiness.mjs orchestration/extension/launch-browser.cjs orchestration/lib/recipe-paths.mjs scripts/check.mjs
 ```
 
 More detail: [Architecture](docs/architecture.md), [Package boundaries](docs/package-boundaries.md), [Runtime file conventions](docs/runtime-file-conventions.md).

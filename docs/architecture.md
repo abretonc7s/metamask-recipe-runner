@@ -46,7 +46,7 @@ is the main way to understand the repository.
 
 | Subsystem | Question it answers | Primary files | Should contain | Should not contain |
 |---|---|---|---|---|
-| Recipe capability/execution | “What can a MetaMask recipe do, and how does a node execute?” | `library/manifests/`, `library/recipes/`, `recipe/src/runner.ts`, `recipe/src/adapters.ts`, `recipe/src/live-adapter-contract.ts`, `library/actions/` | action manifests, domain actions, UI transport binding, adapter outputs, proof semantics | Metro startup, Chrome process flags, simulator boot, git-exclude/rsync cleanup |
+| Recipe capability/execution | “What can a MetaMask recipe do, and how does a node execute?” | `library/manifests/`, `library/recipes/`, `runner/src/runner.ts`, `runner/src/adapters.ts`, `runner/src/live-adapter-contract.ts`, `library/actions/` | action manifests, domain actions, UI transport binding, adapter outputs, proof semantics | Metro startup, Chrome process flags, simulator boot, git-exclude/rsync cleanup |
 | Runtime lifecycle / sandbox helpers | “How do I give an agent an isolated app session that is ready to inspect or run recipes?” | `bin/mm-recipe`, `bin/mme-recipe`, `orchestration/{mobile,extension,core}/`, `recipe/{mobile,extension}/`, `orchestration/lib/` | install/sync harness, start/reuse Metro or Chrome, prewarm bundles, open Extension full-screen or popup-style, prepare dedicated profiles/fixtures, check build/runtime health, cleanup local files | new recipe schema, graph traversal, MetaMask business semantics, task-specific proof logic |
 
 When reviewing a change, first decide which subsystem it touches. Recipe changes
@@ -76,19 +76,19 @@ describes **how an agent should work**, it belongs in skills.
 | `bin/metamask-recipe` | Public binary. Dispatches to typed CLI and platform convenience commands. |
 | `bin/mm-recipe` | Mobile convenience/runtime UX: start/reuse Metro, prewarm bundle, launch app, query bridge, setup wallet, screenshot. |
 | `bin/mme-recipe` | Extension convenience/runtime UX: install, health, decision, ready, watch/refresh/reopen, run recipes. |
-| `recipe/src/cli.ts` | Typed command handlers: manifests, actions, doctor, runtime health/decision/launch, `run`, self-test. |
-| `recipe/src/runner.ts` | Creates the Recipe runner by combining shared core/ui adapters with MetaMask live adapters. Enables the Recipe HUD metadata. |
-| `recipe/src/adapters.ts` | MetaMask adapter binding and `ui.*` transport selection for Mobile vs Extension. Refuses static placeholders for live-only proof actions. |
-| `recipe/src/live-adapter-contract.ts` | Script adapter contract and lookup rules for `library/actions/<platform>/<domain>/*.mjs`. |
+| `runner/src/cli.ts` | Typed command handlers: manifests, actions, doctor, runtime health/decision/launch, `run`, self-test. |
+| `runner/src/runner.ts` | Creates the Recipe runner by combining shared core/ui adapters with MetaMask live adapters. Enables the Recipe HUD metadata. |
+| `runner/src/adapters.ts` | MetaMask adapter binding and `ui.*` transport selection for Mobile vs Extension. Refuses static placeholders for live-only proof actions. |
+| `runner/src/live-adapter-contract.ts` | Script adapter contract and lookup rules for `library/actions/<platform>/<domain>/*.mjs`. |
 | `library/manifests/*.action-manifest.json` | Reviewable capability contract. A recipe may only call declared actions. |
 | `library/actions/mobile/` | Mobile action implementations. Talks to the runner bridge and app-exposed `globalThis.__AGENTIC__` hooks. |
 | `library/actions/extension/` | Extension action implementations. Talks to Chrome/extension pages over CDP. |
 | `orchestration/mobile/inject.sh` | Installs/syncs the Mobile runtime overlay under the configured harness root and protects cleanup/git-exclude behavior. |
 | `orchestration/extension/inject.mjs` | Installs/syncs Extension runtime helpers under the configured harness root. |
-| `orchestration/mobile/` + `recipe/mobile/` | Runner-owned Mobile launch/live/inject/cleanup and verify helpers copied into installed harnesses. |
-| `orchestration/extension/` + `recipe/extension/` | Runner-owned Extension launch/live/watch/windows/wallet-state/readiness helpers (orchestration) and verify (recipe) copied into installed harnesses. |
+| `orchestration/mobile/` + `runner/mobile/` | Runner-owned Mobile launch/live/inject/cleanup and verify helpers copied into installed harnesses. |
+| `orchestration/extension/` + `runner/extension/` | Runner-owned Extension launch/live/watch/windows/wallet-state/readiness helpers (orchestration) and verify (recipe) copied into installed harnesses. |
 | `orchestration/lib/path-defaults.json` | Single source for default `recipeHarnessRoot` and `recipeRuntimeDir`. |
-| `orchestration/lib/harness-path.sh`, `orchestration/lib/recipe-paths.mjs`, `recipe/src/paths.ts` | Shell, standalone Node, and TypeScript accessors for those defaults plus validation. |
+| `orchestration/lib/harness-path.sh`, `orchestration/lib/recipe-paths.mjs`, `runner/src/paths.ts` | Shell, standalone Node, and TypeScript accessors for those defaults plus validation. |
 | `library/recipes/` | Reusable smoke/action-validation recipes only. Task-specific proof recipes stay task-local. |
 | `docs/` | Runner architecture, contracts, and operational conventions. |
 
@@ -126,10 +126,10 @@ this runner.
 ## Recipe execution vs sandbox lifecycle
 
 `metamask-recipe run <recipe.json> --adapter ...` is the recipe path. It creates
-a shared Recipe runner (`recipe/src/runner.ts`), validates the recipe against the
+a shared Recipe runner (`runner/src/runner.ts`), validates the recipe against the
 manifest, executes nodes, and writes artifacts. If a bug is about action fields,
 trace output, adapter semantics, or whether a recipe proves a claim, start in
-`library/manifests/`, `recipe/src/`, `library/actions/`, and `library/recipes/`.
+`library/manifests/`, `runner/src/`, `library/actions/`, and `library/recipes/`.
 
 `prepare`, `launch`, `live`, `verify`, `status`, `decision`, and `ready` are
 sandbox lifecycle paths. They give the agent a reproducible local app session:
@@ -233,7 +233,7 @@ Allowed in shell:
 Not allowed in shell:
 
 - Recipe v1 graph execution;
-- MetaMask domain semantics that can live in `recipe/src/**/*.ts` or `library/actions/**/*.mjs`;
+- MetaMask domain semantics that can live in `runner/src/**/*.ts` or `library/actions/**/*.mjs`;
 - duplicated action manifest logic;
 - product-specific business decisions beyond runtime boot/health checks.
 

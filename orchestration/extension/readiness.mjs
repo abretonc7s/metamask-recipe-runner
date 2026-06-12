@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // readiness.mjs — health probe for one extension instance
 // (formerly: scripts/extension/extension-readiness.mjs,
-//  recipe/extension/extension-readiness.mjs)
+//  runner/extension/extension-readiness.mjs)
 //
 // Purpose:
 //   App-control health probe: verifies the dist build's expected entry

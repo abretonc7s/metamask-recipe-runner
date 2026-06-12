@@ -192,7 +192,7 @@ install_v1_runner_assets() {
     mkdir -p "$HARNESS_DIR/scripts"
     cp "$METAMASK_RUNNER_DIR/orchestration/mobile/launch.sh" "$HARNESS_DIR/scripts/launch.sh"
     cp "$METAMASK_RUNNER_DIR/orchestration/mobile/live.sh" "$HARNESS_DIR/scripts/live.sh"
-    cp "$METAMASK_RUNNER_DIR/recipe/mobile/verify.sh" "$HARNESS_DIR/scripts/verify.sh"
+    cp "$METAMASK_RUNNER_DIR/runner/mobile/verify.sh" "$HARNESS_DIR/scripts/verify.sh"
     mkdir -p "$HARNESS_DIR/scripts/lib"
     cp "$METAMASK_RUNNER_DIR/orchestration/lib/harness-path.sh" "$HARNESS_DIR/scripts/lib/harness-path.sh"
     cp "$METAMASK_RUNNER_DIR/orchestration/lib/path-defaults.json" "$HARNESS_DIR/scripts/lib/path-defaults.json"
