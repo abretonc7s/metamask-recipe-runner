@@ -53,16 +53,19 @@ metamask-recipe ensure-ready --adapter extension --target <extension> --cdp-port
 
 ```text
 bin/            CLI and platform convenience commands
-src/            typed runner core
+src/            typed runner core (glue: cli, runner, adapters, paths)
+orchestration/  run MANY instances + delivery (mobile/extension/core/lib,
+                manifest.json + doctor.mjs feature surface)
+recipe/         proof layer: product control + verify for ONE instance
 manifests/      action manifests
 recipes/        reusable smoke/action-validation recipes
 live-adapters/  Mobile/Extension action implementations
-scripts/        harness install/cleanup and runtime lifecycle helpers
+scripts/        legacy paths (forwarding shims) + check tooling
 docs/           details when this README is not enough
 ```
 
 Defaults for installed harness/runtime paths live in
-`scripts/lib/path-defaults.json`.
+`orchestration/lib/path-defaults.json`.
 
 ## Runtime notes
 
@@ -78,7 +81,7 @@ Defaults for installed harness/runtime paths live in
 ```bash
 yarn check
 bash -n bin/metamask-recipe bin/mm-recipe bin/mme-recipe scripts/*.sh scripts/mobile/*.sh scripts/extension/*.sh
-node --check scripts/inject-extension-harness.mjs scripts/cleanup-extension-harness.mjs scripts/extension/extension-readiness.mjs scripts/extension/launch-chrome-detached.cjs scripts/lib/recipe-paths.mjs scripts/check.mjs
+node --check orchestration/extension/inject.mjs orchestration/extension/cleanup.mjs recipe/extension/extension-readiness.mjs orchestration/extension/launch-browser.cjs orchestration/lib/recipe-paths.mjs scripts/check.mjs
 ```
 
 More detail: [Architecture](docs/architecture.md), [Package boundaries](docs/package-boundaries.md), [Runtime file conventions](docs/runtime-file-conventions.md).

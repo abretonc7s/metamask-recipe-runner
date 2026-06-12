@@ -47,7 +47,7 @@ is the main way to understand the repository.
 | Subsystem | Question it answers | Primary files | Should contain | Should not contain |
 |---|---|---|---|---|
 | Recipe capability/execution | “What can a MetaMask recipe do, and how does a node execute?” | `manifests/`, `recipes/`, `src/runner.ts`, `src/adapters.ts`, `src/live-adapter-contract.ts`, `live-adapters/` | action manifests, domain actions, UI transport binding, adapter outputs, proof semantics | Metro startup, Chrome process flags, simulator boot, git-exclude/rsync cleanup |
-| Runtime lifecycle / sandbox helpers | “How do I give an agent an isolated app session that is ready to inspect or run recipes?” | `bin/mm-recipe`, `bin/mme-recipe`, `scripts/inject-*`, `scripts/mobile/`, `scripts/extension/`, `scripts/lib/` | install/sync harness, start/reuse Metro or Chrome, prewarm bundles, open Extension full-screen or popup-style, prepare dedicated profiles/fixtures, check build/runtime health, cleanup local files | new recipe schema, graph traversal, MetaMask business semantics, task-specific proof logic |
+| Runtime lifecycle / sandbox helpers | “How do I give an agent an isolated app session that is ready to inspect or run recipes?” | `bin/mm-recipe`, `bin/mme-recipe`, `orchestration/{mobile,extension,core}/`, `recipe/{mobile,extension}/`, `orchestration/lib/` | install/sync harness, start/reuse Metro or Chrome, prewarm bundles, open Extension full-screen or popup-style, prepare dedicated profiles/fixtures, check build/runtime health, cleanup local files | new recipe schema, graph traversal, MetaMask business semantics, task-specific proof logic |
 
 When reviewing a change, first decide which subsystem it touches. Recipe changes
 should be validated against manifests and action artifacts. Runtime lifecycle changes should be validated by install/launch/live/verify
@@ -83,18 +83,18 @@ describes **how an agent should work**, it belongs in skills.
 | `manifests/*.action-manifest.json` | Reviewable capability contract. A recipe may only call declared actions. |
 | `live-adapters/mobile/` | Mobile action implementations. Talks to the runner bridge and app-exposed `globalThis.__AGENTIC__` hooks. |
 | `live-adapters/extension/` | Extension action implementations. Talks to Chrome/extension pages over CDP. |
-| `scripts/inject-mobile-harness.sh` | Installs/syncs the Mobile runtime overlay under the configured harness root and protects cleanup/git-exclude behavior. |
-| `scripts/inject-extension-harness.mjs` | Installs/syncs Extension runtime helpers under the configured harness root. |
+| `orchestration/mobile/inject.sh` | Installs/syncs the Mobile runtime overlay under the configured harness root and protects cleanup/git-exclude behavior. |
+| `orchestration/extension/inject.mjs` | Installs/syncs Extension runtime helpers under the configured harness root. |
 | `scripts/mobile/` | Runner-owned Mobile launch/live/verify helpers copied into installed harnesses. |
 | `scripts/extension/` | Runner-owned Extension launch/live/verify/readiness/browser helpers copied into installed harnesses. |
-| `scripts/lib/path-defaults.json` | Single source for default `recipeHarnessRoot` and `recipeRuntimeDir`. |
-| `scripts/lib/harness-path.sh`, `scripts/lib/recipe-paths.mjs`, `src/paths.ts` | Shell, standalone Node, and TypeScript accessors for those defaults plus validation. |
+| `orchestration/lib/path-defaults.json` | Single source for default `recipeHarnessRoot` and `recipeRuntimeDir`. |
+| `orchestration/lib/harness-path.sh`, `orchestration/lib/recipe-paths.mjs`, `src/paths.ts` | Shell, standalone Node, and TypeScript accessors for those defaults plus validation. |
 | `recipes/` | Reusable smoke/action-validation recipes only. Task-specific proof recipes stay task-local. |
 | `docs/` | Runner architecture, contracts, and operational conventions. |
 
 ## Runtime paths and installed harnesses
 
-Defaults are centralized in `scripts/lib/path-defaults.json`:
+Defaults are centralized in `orchestration/lib/path-defaults.json`:
 
 ```json
 {
@@ -138,7 +138,7 @@ isolated browser profile, unpacked extension loaded, and a known home/popup-styl
 UI target. If a bug is about Metro, bundle prewarm, simulator launch, Chrome CDP,
 Extension full-screen vs popup presentation, build freshness, wallet fixture
 placement, git-exclude, or cleanup, start in `bin/mm-recipe`, `bin/mme-recipe`,
-`scripts/mobile/`, `scripts/extension/`, and `scripts/inject-*`.
+`orchestration/{mobile,extension,core}/` and `recipe/{mobile,extension}/` (legacy `scripts/...` paths remain as forwarding shims).
 
 Do not put recipe graph traversal into shell scripts. Shell scripts may prepare
 or inspect the sandboxed runtime, then delegate graph execution to

@@ -9,7 +9,7 @@ Responsibilities here:
 - `refresh-build.sh`, `reopen-browser.sh`, `sidepanel-toggle.sh`: slot/operator helpers copied into the installed harness manifest.
 
 Responsibilities outside this directory:
-- `scripts/inject-extension-harness.mjs` installs this directory under the configured recipe harness root for Extension.
-- `scripts/cleanup-extension-harness.mjs` removes that installed harness.
+- `orchestration/extension/inject.mjs` installs this directory under the configured recipe harness root for Extension.
+- `orchestration/extension/cleanup.mjs` removes that installed harness.
 - `bin/metamask-recipe` owns recipe execution and public runner commands.
 - The `recipe-harness` skill only resolves this runner and delegates.
