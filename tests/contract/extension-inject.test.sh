@@ -1,10 +1,10 @@
 #!/bin/bash
-# Contract test: orchestration/extension/inject-extension-harness.mjs
+# Contract test: orchestration/extension/inject.mjs
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/helpers.sh"
 ct_init
 
-INJECT="$CT_REPO_ROOT/orchestration/extension/inject-extension-harness.mjs"
+INJECT="$CT_REPO_ROOT/orchestration/extension/inject.mjs"
 
 # --help exits 0
 ct_run 0 timeout 60 node "$INJECT" --help
@@ -47,7 +47,7 @@ grep -q "temp/recipe/harness/" "$TGT/.git/info/exclude" || ct_fail "git exclude 
 # cleanupCommand points at an existing cleanup script
 cleanup_path="$(node -e "
 const m = JSON.parse(require('fs').readFileSync('$HARNESS/manifest.json','utf8'));
-const match = m.cleanupCommand.match(/'([^']*cleanup-extension-harness[^']*)'/);
+const match = m.cleanupCommand.match(/'([^']*cleanup[^']*)'/);
 console.log(match ? match[1] : '');
 ")"
 [ -f "$cleanup_path" ] || ct_fail "cleanupCommand path missing: $cleanup_path"

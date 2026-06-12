@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-// inject-extension-harness.mjs — install the extension harness overlay
+// inject.mjs — install the extension harness overlay
+// (formerly: scripts/inject-extension-harness.mjs)
 //
 // Purpose:
 //   Installs the runner delegate, action manifests, recipe snapshots and
@@ -95,7 +96,7 @@ fs.writeFileSync(path.join(harnessDir, 'installed-scripts.sha256'), `${dirConten
 
 // cleanup script: orchestration home once moved; legacy scripts/ home until then.
 const cleanupScript = [
-  path.join(runnerDir, 'orchestration/extension/cleanup-extension-harness.mjs'),
+  path.join(runnerDir, 'orchestration/extension/cleanup.mjs'),
   path.join(runnerDir, 'scripts/cleanup-extension-harness.mjs'),
 ].find((candidate) => fs.existsSync(candidate)) || path.join(runnerDir, 'scripts/cleanup-extension-harness.mjs');
 const cleanupCommand = `RECIPE_HARNESS_ROOT=${harnessRoot} ${shellQuote(cleanupScript)} --target ${shellQuote(target)}`;

@@ -1,11 +1,11 @@
 #!/bin/bash
-# Contract test: orchestration/mobile/cleanup-mobile-harness.sh
+# Contract test: orchestration/mobile/cleanup.sh
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/helpers.sh"
 ct_init
 
-INJECT="$CT_REPO_ROOT/orchestration/mobile/inject-mobile-harness.sh"
-CLEANUP="$CT_REPO_ROOT/orchestration/mobile/cleanup-mobile-harness.sh"
+INJECT="$CT_REPO_ROOT/orchestration/mobile/inject.sh"
+CLEANUP="$CT_REPO_ROOT/orchestration/mobile/cleanup.sh"
 
 # --help exits 0
 ct_run 0 bash "$CLEANUP" --help

@@ -1,10 +1,10 @@
 #!/bin/bash
-# Contract test: orchestration/mobile/inject-mobile-harness.sh
+# Contract test: orchestration/mobile/inject.sh
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/helpers.sh"
 ct_init
 
-INJECT="$CT_REPO_ROOT/orchestration/mobile/inject-mobile-harness.sh"
+INJECT="$CT_REPO_ROOT/orchestration/mobile/inject.sh"
 
 # --help exits 0
 ct_run 0 bash "$INJECT" --help

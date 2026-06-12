@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# inject-mobile-harness.sh — install the mobile harness overlay into a checkout
+# inject.sh — install the mobile harness overlay into a checkout
+# (formerly: scripts/inject-mobile-harness.sh)
 #
 # Purpose:
 #   Installs the runner delegate + recipe/script snapshots into the target's
@@ -64,7 +65,7 @@ if [ -z "$METAMASK_RUNNER_PROTOCOL_ROOT" ] && [ -f "$RUNNER_DIR/.farmslot-root" 
 fi
 export METAMASK_RUNNER_DIR METAMASK_RUNNER_SOURCE_KIND METAMASK_RUNNER_REVISION METAMASK_RUNNER_PROTOCOL_ROOT
 # cleanup script: co-located once moved; legacy scripts/ home until then.
-CLEANUP_SH="$SCRIPT_DIR/cleanup-mobile-harness.sh"
+CLEANUP_SH="$SCRIPT_DIR/cleanup.sh"
 [ -f "$CLEANUP_SH" ] || CLEANUP_SH="$RUNNER_DIR/scripts/cleanup-mobile-harness.sh"
 HARNESS_ROOT="$(harness_root)"
 HARNESS_REL="$HARNESS_ROOT/mobile"

@@ -1,11 +1,11 @@
 #!/bin/bash
-# Contract test: orchestration/extension/cleanup-extension-harness.mjs
+# Contract test: orchestration/extension/cleanup.mjs
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/helpers.sh"
 ct_init
 
-INJECT="$CT_REPO_ROOT/orchestration/extension/inject-extension-harness.mjs"
-CLEANUP="$CT_REPO_ROOT/orchestration/extension/cleanup-extension-harness.mjs"
+INJECT="$CT_REPO_ROOT/orchestration/extension/inject.mjs"
+CLEANUP="$CT_REPO_ROOT/orchestration/extension/cleanup.mjs"
 
 # --help exits 0
 ct_run 0 timeout 60 node "$CLEANUP" --help
