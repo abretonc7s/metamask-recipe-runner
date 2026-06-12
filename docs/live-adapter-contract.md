@@ -15,18 +15,18 @@ For actions that must prove real product behavior, especially `metamask.perps.*`
 ```text
 $METAMASK_RECIPE_LIVE_ADAPTER_DIR/<platform>/<domain>/<action-local-name>.mjs
 $METAMASK_RECIPE_LIVE_ADAPTER_DIR/shared/<domain>/<action-local-name>.mjs
-<runner>/live-adapters/<platform>/<domain>/<action-local-name>.mjs
-<runner>/live-adapters/shared/<domain>/<action-local-name>.mjs
+<runner>/library/actions/<platform>/<domain>/<action-local-name>.mjs
+<runner>/library/actions/shared/<domain>/<action-local-name>.mjs
 ```
 
 Legacy external `.js` adapters are still resolved for compatibility, and `.sh` remains available for edge orchestration. New committed adapter code should use grouped `.mjs` modules. Fully-qualified flat filenames are still searched after grouped paths, but new adapter code should use grouped modules. Do not add `ui.*` files here; official UI actions go through shared base transports. Examples:
 
 ```text
-live-adapters/extension/perps/ensure_positions.mjs
-live-adapters/extension/perps/close_positions.mjs
-live-adapters/extension/perps/close_orders.mjs
-live-adapters/mobile/perps/place_order.mjs
-live-adapters/mobile/wallet/ensure_unlocked.mjs
+library/actions/extension/perps/ensure_positions.mjs
+library/actions/extension/perps/close_positions.mjs
+library/actions/extension/perps/close_orders.mjs
+library/actions/mobile/perps/place_order.mjs
+library/actions/mobile/wallet/ensure_unlocked.mjs
 ```
 
 The runner invokes the script with one argument: a JSON input file path. The same path is also available as `METAMASK_RECIPE_ADAPTER_INPUT`. The script must write JSON to `outputPath` from the input document, or print JSON to stdout.
@@ -101,7 +101,7 @@ For Perps, recipes should use the runner-provided `metamask.perps.start_state({ 
 
 ## Built-in Extension live adapters
 
-The first Extension adapter set is bundled under `live-adapters/extension/` and talks directly to the Chrome extension page target over CDP. It does not execute a second recipe graph. The v1 runner still owns workflow traversal; each script only fulfills one manifest-declared action.
+The first Extension adapter set is bundled under `library/actions/extension/` and talks directly to the Chrome extension page target over CDP. It does not execute a second recipe graph. The v1 runner still owns workflow traversal; each script only fulfills one manifest-declared action.
 
 Runtime input:
 
@@ -154,7 +154,7 @@ Read-only position checks use `stateHooks.submitRequestToBackground('perpsGetPos
 
 ## Built-in Mobile live adapters
 
-The Mobile adapter is bundled under `live-adapters/mobile/`. Its CDP bridge, wallet setup, target discovery, and screenshot helpers run from the runner runtime; the Mobile checkout must not own harness control scripts. The app still needs a development-only in-app bridge/HUD overlay when a historical checkout does not expose the required `globalThis.__AGENTIC__` hooks.
+The Mobile adapter is bundled under `library/actions/mobile/`. Its CDP bridge, wallet setup, target discovery, and screenshot helpers run from the runner runtime; the Mobile checkout must not own harness control scripts. The app still needs a development-only in-app bridge/HUD overlay when a historical checkout does not expose the required `globalThis.__AGENTIC__` hooks.
 
 Runtime input:
 

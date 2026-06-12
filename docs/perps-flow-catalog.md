@@ -116,11 +116,11 @@ State-changing direct controller calls must still be followed by a read/assert s
 Perps should converge to one domain dispatcher per platform, not one new file for every controller operation. The runner can still expose many manifest actions, but implementation should route through a small domain module:
 
 ```text
-live-adapters/mobile/perps/perps.mjs       # shared Mobile Perps operation catalog
-live-adapters/extension/perps/perps.mjs    # shared Extension Perps operation catalog
+library/actions/mobile/perps/perps.mjs       # shared Mobile Perps operation catalog
+library/actions/extension/perps/perps.mjs    # shared Extension Perps operation catalog
 ```
 
-Runner resolution supports a domain dispatcher fallback such as `live-adapters/<platform>/perps/perps.mjs` when an action-specific file is absent. That keeps discoverability in the manifest while avoiding a growing pile of tiny wrapper files.
+Runner resolution supports a domain dispatcher fallback such as `library/actions/<platform>/perps/perps.mjs` when an action-specific file is absent. That keeps discoverability in the manifest while avoiding a growing pile of tiny wrapper files.
 
 ## Rule of thumb for adding adapter files
 

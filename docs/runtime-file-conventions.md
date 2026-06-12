@@ -8,7 +8,7 @@ package without requiring target app builds to transpile runner code.
 
 - `src/**/*.ts` — typed runner core: CLI parsing, manifests, adapter binding,
   runtime decisions, and shared helper logic.
-- `live-adapters/**/*.mjs` and `scripts/**/*.mjs` — standalone ESM modules that
+- `library/actions/**/*.mjs` and `scripts/**/*.mjs` — standalone ESM modules that
   Node executes directly with no build step. Use these for action adapters and
   small injected/runtime helpers.
 - `*.cjs` — compatibility islands only. Keep these quarantined for helper code

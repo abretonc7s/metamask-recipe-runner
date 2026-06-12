@@ -46,7 +46,7 @@ is the main way to understand the repository.
 
 | Subsystem | Question it answers | Primary files | Should contain | Should not contain |
 |---|---|---|---|---|
-| Recipe capability/execution | “What can a MetaMask recipe do, and how does a node execute?” | `manifests/`, `recipes/`, `src/runner.ts`, `src/adapters.ts`, `src/live-adapter-contract.ts`, `live-adapters/` | action manifests, domain actions, UI transport binding, adapter outputs, proof semantics | Metro startup, Chrome process flags, simulator boot, git-exclude/rsync cleanup |
+| Recipe capability/execution | “What can a MetaMask recipe do, and how does a node execute?” | `library/manifests/`, `library/recipes/`, `recipe/src/runner.ts`, `recipe/src/adapters.ts`, `recipe/src/live-adapter-contract.ts`, `library/actions/` | action manifests, domain actions, UI transport binding, adapter outputs, proof semantics | Metro startup, Chrome process flags, simulator boot, git-exclude/rsync cleanup |
 | Runtime lifecycle / sandbox helpers | “How do I give an agent an isolated app session that is ready to inspect or run recipes?” | `bin/mm-recipe`, `bin/mme-recipe`, `orchestration/{mobile,extension,core}/`, `recipe/{mobile,extension}/`, `orchestration/lib/` | install/sync harness, start/reuse Metro or Chrome, prewarm bundles, open Extension full-screen or popup-style, prepare dedicated profiles/fixtures, check build/runtime health, cleanup local files | new recipe schema, graph traversal, MetaMask business semantics, task-specific proof logic |
 
 When reviewing a change, first decide which subsystem it touches. Recipe changes
@@ -76,20 +76,20 @@ describes **how an agent should work**, it belongs in skills.
 | `bin/metamask-recipe` | Public binary. Dispatches to typed CLI and platform convenience commands. |
 | `bin/mm-recipe` | Mobile convenience/runtime UX: start/reuse Metro, prewarm bundle, launch app, query bridge, setup wallet, screenshot. |
 | `bin/mme-recipe` | Extension convenience/runtime UX: install, health, decision, ready, watch/refresh/reopen, run recipes. |
-| `src/cli.ts` | Typed command handlers: manifests, actions, doctor, runtime health/decision/launch, `run`, self-test. |
-| `src/runner.ts` | Creates the Recipe runner by combining shared core/ui adapters with MetaMask live adapters. Enables the Recipe HUD metadata. |
-| `src/adapters.ts` | MetaMask adapter binding and `ui.*` transport selection for Mobile vs Extension. Refuses static placeholders for live-only proof actions. |
-| `src/live-adapter-contract.ts` | Script adapter contract and lookup rules for `live-adapters/<platform>/<domain>/*.mjs`. |
-| `manifests/*.action-manifest.json` | Reviewable capability contract. A recipe may only call declared actions. |
-| `live-adapters/mobile/` | Mobile action implementations. Talks to the runner bridge and app-exposed `globalThis.__AGENTIC__` hooks. |
-| `live-adapters/extension/` | Extension action implementations. Talks to Chrome/extension pages over CDP. |
+| `recipe/src/cli.ts` | Typed command handlers: manifests, actions, doctor, runtime health/decision/launch, `run`, self-test. |
+| `recipe/src/runner.ts` | Creates the Recipe runner by combining shared core/ui adapters with MetaMask live adapters. Enables the Recipe HUD metadata. |
+| `recipe/src/adapters.ts` | MetaMask adapter binding and `ui.*` transport selection for Mobile vs Extension. Refuses static placeholders for live-only proof actions. |
+| `recipe/src/live-adapter-contract.ts` | Script adapter contract and lookup rules for `library/actions/<platform>/<domain>/*.mjs`. |
+| `library/manifests/*.action-manifest.json` | Reviewable capability contract. A recipe may only call declared actions. |
+| `library/actions/mobile/` | Mobile action implementations. Talks to the runner bridge and app-exposed `globalThis.__AGENTIC__` hooks. |
+| `library/actions/extension/` | Extension action implementations. Talks to Chrome/extension pages over CDP. |
 | `orchestration/mobile/inject.sh` | Installs/syncs the Mobile runtime overlay under the configured harness root and protects cleanup/git-exclude behavior. |
 | `orchestration/extension/inject.mjs` | Installs/syncs Extension runtime helpers under the configured harness root. |
 | `scripts/mobile/` | Runner-owned Mobile launch/live/verify helpers copied into installed harnesses. |
 | `scripts/extension/` | Runner-owned Extension launch/live/verify/readiness/browser helpers copied into installed harnesses. |
 | `orchestration/lib/path-defaults.json` | Single source for default `recipeHarnessRoot` and `recipeRuntimeDir`. |
-| `orchestration/lib/harness-path.sh`, `orchestration/lib/recipe-paths.mjs`, `src/paths.ts` | Shell, standalone Node, and TypeScript accessors for those defaults plus validation. |
-| `recipes/` | Reusable smoke/action-validation recipes only. Task-specific proof recipes stay task-local. |
+| `orchestration/lib/harness-path.sh`, `orchestration/lib/recipe-paths.mjs`, `recipe/src/paths.ts` | Shell, standalone Node, and TypeScript accessors for those defaults plus validation. |
+| `library/recipes/` | Reusable smoke/action-validation recipes only. Task-specific proof recipes stay task-local. |
 | `docs/` | Runner architecture, contracts, and operational conventions. |
 
 ## Runtime paths and installed harnesses
@@ -126,10 +126,10 @@ this runner.
 ## Recipe execution vs sandbox lifecycle
 
 `metamask-recipe run <recipe.json> --adapter ...` is the recipe path. It creates
-a shared Recipe runner (`src/runner.ts`), validates the recipe against the
+a shared Recipe runner (`recipe/src/runner.ts`), validates the recipe against the
 manifest, executes nodes, and writes artifacts. If a bug is about action fields,
 trace output, adapter semantics, or whether a recipe proves a claim, start in
-`manifests/`, `src/`, `live-adapters/`, and `recipes/`.
+`library/manifests/`, `recipe/src/`, `library/actions/`, and `library/recipes/`.
 
 `prepare`, `launch`, `live`, `verify`, `status`, `decision`, and `ready` are
 sandbox lifecycle paths. They give the agent a reproducible local app session:
@@ -151,7 +151,7 @@ These names are easy to mix up; they are different concerns.
 | Term | What it is | Why it exists |
 |---|---|---|
 | Recipe HUD | A visual overlay driven by Recipe runner metadata (`intent`, current node, status). | Makes screenshots/videos explain what the recipe is doing without exposing secrets. |
-| Mobile bridge | Runner-side CDP/Hermes bridge process under `live-adapters/mobile/bridge-runtime/`. | Lets the runner call app-exposed commands, read state, press UI targets, and capture status from React Native. |
+| Mobile bridge | Runner-side CDP/Hermes bridge process under `library/actions/mobile/bridge-runtime/`. | Lets the runner call app-exposed commands, read state, press UI targets, and capture status from React Native. |
 | `globalThis.__AGENTIC__` | Development-only in-app command surface exposed by the Mobile overlay/patch. | Gives the bridge a stable API for route/status/wallet/UI operations when the app lacks a built-in automation API. |
 | Extension CDP hooks | Chrome DevTools Protocol access to extension pages/background state hooks. | Lets the runner inspect/drive the unpacked Extension without patching product source. |
 
@@ -167,13 +167,13 @@ DOM by default.
 mm-recipe / scripts/mobile/*.sh
       │ starts/reuses Metro, prewarms bundle, launches iOS/Android dev client
       ▼
-live-adapters/mobile/bridge-runtime/cdp-bridge.cjs
+library/actions/mobile/bridge-runtime/cdp-bridge.cjs
       │ connects to Hermes / RN debug runtime
       ▼
 globalThis.__AGENTIC__ inside the app
       │ route/status/wallet/ui commands + optional HUD rendering
       ▼
-live-adapters/mobile/{wallet,perps,ui,platform}/*.mjs
+library/actions/mobile/{wallet,perps,ui,platform}/*.mjs
 ```
 
 Ideally the app would expose a product-owned debug automation surface directly,
@@ -205,7 +205,7 @@ mme-recipe / scripts/extension/*.sh
 Chrome for Testing with --load-extension=<runtime-dist>
       │ CDP target discovery + deterministic extension id
       ▼
-live-adapters/extension/{wallet,perps,ui,platform}/*.mjs
+library/actions/extension/{wallet,perps,ui,platform}/*.mjs
       │ extension page/background hooks and UI events
 ```
 
@@ -233,7 +233,7 @@ Allowed in shell:
 Not allowed in shell:
 
 - Recipe v1 graph execution;
-- MetaMask domain semantics that can live in `src/**/*.ts` or `live-adapters/**/*.mjs`;
+- MetaMask domain semantics that can live in `recipe/src/**/*.ts` or `library/actions/**/*.mjs`;
 - duplicated action manifest logic;
 - product-specific business decisions beyond runtime boot/health checks.
 
@@ -244,7 +244,7 @@ TypeScript or a focused `.mjs` adapter and keep shell as the launcher.
 
 1. Add/adjust the shared capability in both Mobile and Extension manifests when
    the concept exists on both platforms.
-2. Implement durable behavior under `live-adapters/<platform>/<domain>/`.
+2. Implement durable behavior under `library/actions/<platform>/<domain>/`.
 3. Keep parameterized actions instead of multiplying action names.
 4. Ensure every `ensure_*` action proves a postcondition.
 5. Use official `ui.*` actions and screenshot claims for visible acceptance

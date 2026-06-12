@@ -53,14 +53,13 @@ metamask-recipe ensure-ready --adapter extension --target <extension> --cdp-port
 
 ```text
 bin/            CLI and platform convenience commands
-src/            typed runner core (glue: cli, runner, adapters, paths)
-orchestration/  run MANY instances + delivery (mobile/extension/core/lib,
-                manifest.json + doctor.mjs feature surface)
-recipe/         proof layer: product control + verify for ONE instance
-manifests/      action manifests
-recipes/        reusable smoke/action-validation recipes
-live-adapters/  Mobile/Extension action implementations
-scripts/        legacy paths (forwarding shims) + check tooling
+recipe/         prove one change on ONE instance: typed runner core
+                (recipe/src) + per-platform product control and verify
+orchestration/  run MANY instances + delivery: launch/live/watch/inject/
+                cleanup per platform, shared lib, manifest.json + doctor.mjs
+library/        content: actions/ (per-platform action implementations),
+                manifests/ (action manifests), recipes/ (reusable recipes)
+scripts/        deprecated forwarding shims (+ check tooling)
 docs/           details when this README is not enough
 ```
 
