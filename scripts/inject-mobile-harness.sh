@@ -162,6 +162,7 @@ install_v1_runner_assets() {
     # Moved features live in orchestration/; overwrite the forwarding shims so
     # the installed copy keeps the real scripts (same installed layout).
     cp "$METAMASK_RUNNER_DIR/orchestration/mobile/launch.sh" "$HARNESS_DIR/scripts/launch.sh"
+    cp "$METAMASK_RUNNER_DIR/orchestration/mobile/live.sh" "$HARNESS_DIR/scripts/live.sh"
     mkdir -p "$HARNESS_DIR/scripts/lib"
     cp "$METAMASK_RUNNER_DIR/orchestration/lib/harness-path.sh" "$HARNESS_DIR/scripts/lib/harness-path.sh"
     cp "$METAMASK_RUNNER_DIR/orchestration/lib/path-defaults.json" "$HARNESS_DIR/scripts/lib/path-defaults.json"
