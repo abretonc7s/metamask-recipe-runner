@@ -2,8 +2,8 @@ import http from 'node:http';
 import path from 'node:path';
 import { compatibilityMode, fixtureSummary, repoShape } from './doctor.ts';
 import { runLiveAdapterScript } from './live-adapter-contract.ts';
-import { withExtensionPage } from '../live-adapters/extension/platform/cdp.mjs';
-import { bridgeCommand, evalSync, simulatorScreenshot } from '../live-adapters/mobile/platform/bridge.mjs';
+import { withExtensionPage } from '../../live-adapters/extension/platform/cdp.mjs';
+import { bridgeCommand, evalSync, simulatorScreenshot } from '../../live-adapters/mobile/platform/bridge.mjs';
 import type {
   ActionAdapter,
   ActionExecutionContext,

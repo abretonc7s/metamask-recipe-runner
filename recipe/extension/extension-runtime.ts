@@ -4,7 +4,7 @@ import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { importRecipeHarnessRuntimeBrowserExtension, importRecipeHarnessRuntimeCdp, recipeRuntimeDir, resolveLocalProtocolRoot, resolveRequiredLocalProtocolRoot, runnerDir } from '../../src/paths.ts';
+import { importRecipeHarnessRuntimeBrowserExtension, importRecipeHarnessRuntimeCdp, recipeRuntimeDir, resolveLocalProtocolRoot, resolveRequiredLocalProtocolRoot, runnerDir } from '../src/paths.ts';
 
 // Runtime health uses package dependencies. Launching a host-managed validation
 // browser remains a dev-only path because it needs pool/project scripts from a

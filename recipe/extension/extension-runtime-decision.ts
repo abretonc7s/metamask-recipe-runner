@@ -5,7 +5,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { recipeWatchLogCandidates } from '../../src/paths.ts';
+import { recipeWatchLogCandidates } from '../src/paths.ts';
 
 /**
  * Deterministic runtime-readiness decision for the MetaMask Extension.

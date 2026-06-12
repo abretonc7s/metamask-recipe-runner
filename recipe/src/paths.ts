@@ -11,7 +11,7 @@ import type {
   MetaMaskRecipeAdapter,
 } from './types.ts';
 
-export const runnerDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+export const runnerDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const pathDefaults = readPathDefaults();
 export const DEFAULT_RECIPE_RUNTIME_DIR = pathDefaults.recipeRuntimeDir;
 export const DEFAULT_RECIPE_HARNESS_ROOT = pathDefaults.recipeHarnessRoot;

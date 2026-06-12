@@ -5,9 +5,9 @@ import os from 'node:os';
 import path from 'node:path';
 
 import { createDoctorReport } from './doctor.ts';
-import { ensureExtensionReady } from '../recipe/extension/extension-ensure-ready.ts';
-import { resolveExtensionId } from '../recipe/extension/extension-id.ts';
-import { decideExtensionReadiness } from '../recipe/extension/extension-runtime-decision.ts';
+import { ensureExtensionReady } from '../extension/extension-ensure-ready.ts';
+import { resolveExtensionId } from '../extension/extension-id.ts';
+import { decideExtensionReadiness } from '../extension/extension-runtime-decision.ts';
 // NOTE: extension-runtime.ts loads the recipe harness at module scope, so it
 // is imported LAZILY (dynamic import) only inside the handlers that drive a live
 // runtime. Static-import it here and every command — manifest, doctor,
@@ -192,7 +192,7 @@ async function prepareRuntimeIfNeeded(
   runtimeOptions: RuntimeOptions,
 ): Promise<void> {
   if (adapter !== 'extension' || runtimeOptions.skipExtensionRuntimePrepare === true) return;
-  const { prepareExtensionRuntime } = await import('../recipe/extension/extension-runtime.ts');
+  const { prepareExtensionRuntime } = await import('../extension/extension-runtime.ts');
   await prepareExtensionRuntime({
     projectRoot,
     cdpPort: runtimeOptions.cdpPort,
@@ -352,7 +352,7 @@ async function handleRuntimeHealth({ options }: ParsedArgs): Promise<number> {
     optionString(options, 'cdpPort') ?? process.env.CDP_PORT ?? process.env.RECIPE_CDP_PORT,
     'runtime-health requires --cdp-port <port>.',
   );
-  const { checkExtensionRuntimeHealth, formatHealthFailure } = await import('../recipe/extension/extension-runtime.ts');
+  const { checkExtensionRuntimeHealth, formatHealthFailure } = await import('../extension/extension-runtime.ts');
   const report = await checkExtensionRuntimeHealth(target, cdpPort);
   if (optionFlag(options, 'json')) console.log(JSON.stringify(report, null, 2));
   else if (report.status === 'PASS') console.log(`PASS extension runtime cdp=${cdpPort} target=${report.targetUrl}`);
