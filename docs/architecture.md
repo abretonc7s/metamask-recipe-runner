@@ -85,8 +85,8 @@ describes **how an agent should work**, it belongs in skills.
 | `library/actions/extension/` | Extension action implementations. Talks to Chrome/extension pages over CDP. |
 | `orchestration/mobile/inject.sh` | Installs/syncs the Mobile runtime overlay under the configured harness root and protects cleanup/git-exclude behavior. |
 | `orchestration/extension/inject.mjs` | Installs/syncs Extension runtime helpers under the configured harness root. |
-| `scripts/mobile/` | Runner-owned Mobile launch/live/verify helpers copied into installed harnesses. |
-| `scripts/extension/` | Runner-owned Extension launch/live/verify/readiness/browser helpers copied into installed harnesses. |
+| `orchestration/mobile/` + `recipe/mobile/` | Runner-owned Mobile launch/live/inject/cleanup and verify helpers copied into installed harnesses. |
+| `orchestration/extension/` + `recipe/extension/` | Runner-owned Extension launch/live/watch/browser and verify/readiness helpers copied into installed harnesses. |
 | `orchestration/lib/path-defaults.json` | Single source for default `recipeHarnessRoot` and `recipeRuntimeDir`. |
 | `orchestration/lib/harness-path.sh`, `orchestration/lib/recipe-paths.mjs`, `recipe/src/paths.ts` | Shell, standalone Node, and TypeScript accessors for those defaults plus validation. |
 | `library/recipes/` | Reusable smoke/action-validation recipes only. Task-specific proof recipes stay task-local. |
@@ -138,7 +138,7 @@ isolated browser profile, unpacked extension loaded, and a known home/popup-styl
 UI target. If a bug is about Metro, bundle prewarm, simulator launch, Chrome CDP,
 Extension full-screen vs popup presentation, build freshness, wallet fixture
 placement, git-exclude, or cleanup, start in `bin/mm-recipe`, `bin/mme-recipe`,
-`orchestration/{mobile,extension,core}/` and `recipe/{mobile,extension}/` (legacy `scripts/...` paths remain as forwarding shims).
+`orchestration/{mobile,extension,core}/` and `recipe/{mobile,extension}/`.
 
 Do not put recipe graph traversal into shell scripts. Shell scripts may prepare
 or inspect the sandboxed runtime, then delegate graph execution to
@@ -164,7 +164,7 @@ Mobile has the most moving parts because React Native does not expose a browser
 DOM by default.
 
 ```text
-mm-recipe / scripts/mobile/*.sh
+mm-recipe / orchestration/mobile/*.sh
       │ starts/reuses Metro, prewarms bundle, launches iOS/Android dev client
       ▼
 library/actions/mobile/bridge-runtime/cdp-bridge.cjs
@@ -199,7 +199,7 @@ Extension does not need an in-product source patch. The runner works through an
 unpacked `dist/chrome` build and Chrome CDP.
 
 ```text
-mme-recipe / scripts/extension/*.sh
+mme-recipe / orchestration/extension/*.sh
       │ checks dist freshness, build health, fixture/profile state
       ▼
 Chrome for Testing with --load-extension=<runtime-dist>

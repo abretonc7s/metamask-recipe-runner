@@ -59,7 +59,7 @@ orchestration/  run MANY instances + delivery: launch/live/watch/inject/
                 cleanup per platform, shared lib, manifest.json + doctor.mjs
 library/        content: actions/ (per-platform action implementations),
                 manifests/ (action manifests), recipes/ (reusable recipes)
-scripts/        deprecated forwarding shims (+ check tooling)
+scripts/        dev tooling (yarn check, local farmslot link, e2e validation)
 docs/           details when this README is not enough
 ```
 
@@ -79,7 +79,7 @@ Defaults for installed harness/runtime paths live in
 
 ```bash
 yarn check
-bash -n bin/metamask-recipe bin/mm-recipe bin/mme-recipe scripts/*.sh scripts/mobile/*.sh scripts/extension/*.sh
+bash -n bin/metamask-recipe bin/mm-recipe bin/mme-recipe orchestration/{mobile,extension,core}/*.sh recipe/{mobile,extension}/*.sh
 node --check orchestration/extension/inject.mjs orchestration/extension/cleanup.mjs recipe/extension/extension-readiness.mjs orchestration/extension/launch-browser.cjs orchestration/lib/recipe-paths.mjs scripts/check.mjs
 ```
 
